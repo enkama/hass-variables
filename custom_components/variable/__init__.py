@@ -7,7 +7,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
-from slugify import slugify
+from homeassistant.util import slugify
 import voluptuous as vol
 
 _LOGGER = logging.getLogger(__name__)

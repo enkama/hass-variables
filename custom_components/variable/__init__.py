@@ -170,7 +170,8 @@ class Variable(RestoreEntity):
         self._attributes = attributes
         self._restore = restore
         self._force_update = force_update
-        self._attr_unique_id = slugify(DOMAIN + self.entity_id)
+        if domain == DOMAIN:
+            self._attr_unique_id = slugify(self.entity_id)
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""

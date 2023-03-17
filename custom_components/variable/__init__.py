@@ -7,6 +7,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import ConfigType
+from slugify import slugify
 import voluptuous as vol
 
 _LOGGER = logging.getLogger(__name__)
@@ -169,6 +170,7 @@ class Variable(RestoreEntity):
         self._attributes = attributes
         self._restore = restore
         self._force_update = force_update
+        self._attr_unique_id = slugify(DOMAIN + self.entity_id)
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""

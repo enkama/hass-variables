@@ -4,7 +4,14 @@ import logging
 from typing import Any
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_ICON, CONF_NAME, Platform
+from homeassistant.components import binary_sensor, sensor
+from homeassistant.const import (
+    CONF_DEVICE_CLASS,
+    CONF_ICON,
+    CONF_NAME,
+    CONF_UNIT_OF_MEASUREMENT,
+    Platform,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
@@ -12,6 +19,7 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
 from .const import (
+    BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST,
     CONF_ATTRIBUTES,
     CONF_ENTITY_PLATFORM,
     CONF_FORCE_UPDATE,
@@ -23,7 +31,11 @@ from .const import (
     DEFAULT_RESTORE,
     DOMAIN,
     PLATFORMS,
+    SENSOR_DEVICE_CLASS_SELECT_LIST,
 )
+
+# sensor: SensorDeviceClass, DEVICE_CLASS_STATE_CLASSES, DEVICE_CLASS_UNITS
+# binary_sensor: BinarySensorDeviceClass
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +62,14 @@ ADD_SENSOR_SCHEMA = vol.Schema(
         vol.Optional(
             CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
         ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+        vol.Optional(CONF_DEVICE_CLASS): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=SENSOR_DEVICE_CLASS_SELECT_LIST,
+                multiple=False,
+                custom_value=False,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
     }
 )
 
@@ -78,6 +98,14 @@ ADD_BINARY_SENSOR_SCHEMA = vol.Schema(
         vol.Optional(
             CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
         ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+        vol.Optional(CONF_DEVICE_CLASS): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST,
+                multiple=False,
+                custom_value=False,
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
     }
 )
 
@@ -107,15 +135,11 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_add_sensor(self, user_input=None, errors=None):
         if user_input is not None:
-
+            user_input.update({CONF_ENTITY_PLATFORM: Platform.SENSOR})
             try:
-                user_input.update({CONF_ENTITY_PLATFORM: Platform.SENSOR})
-                info = await validate_sensor_input(self.hass, user_input)
-                _LOGGER.debug(f"[New Sensor Variable] info: {info}")
-                _LOGGER.debug(f"[New Sensor Variable] user_input: {user_input}")
-                return self.async_create_entry(
-                    title=info.get("title", ""), data=user_input
-                )
+                _LOGGER.debug(f"[New Sensor Page 1] page_1_input: {user_input}")
+                self.add_sensor_input = user_input
+                return await self.async_step_sensor_page_2()
             except Exception as err:
                 _LOGGER.exception(
                     f"[config_flow async_step_add_sensor] Unexpected exception: {err}"
@@ -130,6 +154,96 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={
                 "component_config_url": COMPONENT_CONFIG_URL,
             },
+        )
+
+    async def async_step_sensor_page_2(self, user_input=None):
+        errors = {}
+        if user_input is not None:
+            _LOGGER.debug(
+                f"[New Sensor Variable] page_1_input: {self.add_sensor_input}"
+            )
+            _LOGGER.debug(f"[New Sensor Page 2] page_2_input: {user_input}")
+            if self.add_sensor_input is not None and self.add_sensor_input:
+                user_input.update(self.add_sensor_input)
+            if user_input is not None:
+                for k, v in list(user_input.items()):
+                    if v is None or v == "None":
+                        user_input.pop(k, None)
+            _LOGGER.debug(f"[New Sensor Page 2] Final user_input: {user_input}")
+            info = await validate_sensor_input(self.hass, user_input)
+            _LOGGER.debug(f"[New Sensor Variable] info: {info}")
+            return self.async_create_entry(title=info.get("title", ""), data=user_input)
+
+        _LOGGER.debug(f"[New Sensor Page 2] Initial user_input: {user_input}")
+        _LOGGER.debug(
+            f"[New Sensor Page 2] device_class: {self.add_sensor_input.get(CONF_DEVICE_CLASS)}"
+        )
+        SENSOR_STATE_CLASS_SELECT_LIST = []
+        SENSOR_STATE_CLASS_SELECT_LIST.append(
+            selector.SelectOptionDict(label="None", value="None")
+        )
+        if (
+            self.add_sensor_input.get(CONF_DEVICE_CLASS) is None
+            or self.add_sensor_input.get(CONF_DEVICE_CLASS) == "None"
+        ):
+            for el in sensor.SensorStateClass:
+                SENSOR_STATE_CLASS_SELECT_LIST.append(
+                    selector.SelectOptionDict(label=str(el.name), value=str(el.value))
+                )
+        else:
+            for el in sensor.DEVICE_CLASS_STATE_CLASSES.get(
+                self.add_sensor_input.get(CONF_DEVICE_CLASS)
+            ):
+                SENSOR_STATE_CLASS_SELECT_LIST.append(
+                    selector.SelectOptionDict(label=str(el.name), value=str(el.value))
+                )
+        _LOGGER.debug(
+            f"[New Sensor Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
+        )
+
+        SENSOR_UNITS_SELECT_LIST = []
+        SENSOR_UNITS_SELECT_LIST.append(
+            selector.SelectOptionDict(label="None", value="None")
+        )
+        if (
+            self.add_sensor_input.get(CONF_DEVICE_CLASS) is not None
+            and self.add_sensor_input.get(CONF_DEVICE_CLASS) != "None"
+        ):
+            for el in sensor.DEVICE_CLASS_UNITS.get(
+                self.add_sensor_input.get(CONF_DEVICE_CLASS)
+            ):
+                SENSOR_UNITS_SELECT_LIST.append(
+                    selector.SelectOptionDict(label=str(el), value=str(el))
+                )
+        _LOGGER.debug(
+            f"[New Sensor Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
+        )
+        SENSOR_PAGE_2_SCHEMA = vol.Schema(
+            {
+                vol.Optional(sensor.CONF_STATE_CLASS): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=SENSOR_STATE_CLASS_SELECT_LIST,
+                        multiple=False,
+                        custom_value=False,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Optional(CONF_UNIT_OF_MEASUREMENT): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=SENSOR_UNITS_SELECT_LIST,
+                        multiple=False,
+                        custom_value=False,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+            }
+        )
+
+        # If there is no user input or there were errors, show the form again, including any errors that were found with the input.
+        return self.async_show_form(
+            step_id="sensor_page_2",
+            data_schema=SENSOR_PAGE_2_SCHEMA,
+            errors=errors,
         )
 
     async def async_step_add_binary_sensor(self, user_input=None, errors=None):

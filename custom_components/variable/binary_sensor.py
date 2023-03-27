@@ -2,7 +2,15 @@ import logging
 
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ICON, CONF_NAME, STATE_OFF, STATE_ON, Platform
+from homeassistant.const import (
+    CONF_DEVICE_CLASS,
+    CONF_ICON,
+    CONF_NAME,
+    CONF_UNIT_OF_MEASUREMENT,
+    STATE_OFF,
+    STATE_ON,
+    Platform,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity import generate_entity_id
@@ -14,6 +22,7 @@ from .const import (
     ATTR_ATTRIBUTES,
     ATTR_REPLACE_ATTRIBUTES,
     ATTR_VALUE,
+    BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST,
     CONF_ATTRIBUTES,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
@@ -136,9 +145,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
             _LOGGER.info(f"({self._attr_name}) Restoring after Reboot")
             state = await self.async_get_last_state()
             if state:
-                _LOGGER.debug(
-                    f"({self._attr_name}) Restored state: {state.as_dict()}"
-                )
+                _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
                 self._attr_extra_state_attributes = state.attributes
                 if state.state == STATE_OFF:
                     self._attr_is_on = False

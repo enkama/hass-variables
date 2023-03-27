@@ -1,15 +1,19 @@
 import logging
 
-import voluptuous as vol
-
 from homeassistant.components.sensor import PLATFORM_SCHEMA, RestoreSensor
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ICON, CONF_NAME, Platform
+from homeassistant.const import (
+    CONF_DEVICE_CLASS,
+    CONF_ICON,
+    CONF_NAME,
+    CONF_UNIT_OF_MEASUREMENT,
+    Platform,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity import generate_entity_id
 from homeassistant.util import slugify
-
+import voluptuous as vol
 
 from .const import (
     ATTR_ATTRIBUTES,
@@ -25,6 +29,7 @@ from .const import (
     DEFAULT_REPLACE_ATTRIBUTES,
     DEFAULT_RESTORE,
     DOMAIN,
+    SENSOR_DEVICE_CLASS_SELECT_LIST,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -138,9 +143,7 @@ class Variable(RestoreSensor):
                 self._attr_native_value = sensor.native_value
             state = await self.async_get_last_state()
             if state:
-                _LOGGER.debug(
-                    f"({self._attr_name}) Restored state: {state.as_dict()}"
-                )
+                _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
                 self._attr_extra_state_attributes = state.attributes
 
                 # Unsure how to deal with state vs native_value on restore.

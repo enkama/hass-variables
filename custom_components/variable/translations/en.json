@@ -16,9 +16,18 @@
           "value": "Initial Value",
           "attributes": "Initial Attributes",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "device_class": "Device Class"
         },
         "description": "Create a new Sensor Variable\nSee [Configuration Options]({component_config_url}) on GitHub for details"
+      },
+      "sensor_page_2": {
+        "title": "Variables+History - Sensor Page 2",
+        "data": {
+          "state_class": "State Class",
+          "unit_of_measurement": "Unit of Measurement"
+        },
+        "description": "Create a new Sensor Variable Page 2"
       },
       "add_binary_sensor": {
         "title": "Variables+History - Binary Sensor",
@@ -29,7 +38,8 @@
           "value": "Initial Value",
           "attributes": "Initial Attributes",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "device_class": "Device Class"
         },
         "description": "Create a new Binary Sensor Variable\nSee [Configuration Options]({component_config_url}) on GitHub for details"
       }

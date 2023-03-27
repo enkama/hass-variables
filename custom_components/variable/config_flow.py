@@ -218,6 +218,8 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         _LOGGER.debug(
             f"[New Sensor Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
         )
+
+        # newschema = schemavar.extend(addschema)
         SENSOR_PAGE_2_SCHEMA = vol.Schema(
             {
                 vol.Optional(sensor.CONF_STATE_CLASS): selector.SelectSelector(

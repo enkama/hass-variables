@@ -149,16 +149,15 @@ class Variable(RestoreSensor):
                 # Unsure how to deal with state vs native_value on restore.
                 # Setting Restored state to override native_value for now.
                 # self._state = state.state
-                if state and (sensor.native_value != state.state):
+                if (sensor is None or (
+                    sensor and state.state is not None
+                    and state.state.lower() != "none"
+                    and sensor.native_value != state.state
+                )):
                     _LOGGER.info(
                         f"({self._attr_name}) Restored values are different. "
                         f"native_value: {sensor.native_value} | state: {state.state}"
                     )
-                if state.state is not None and state.state.lower() not in [
-                    "unknown",
-                    "unavailable",
-                    "none",
-                ]:
                     self._attr_native_value = state.state
 
     @property

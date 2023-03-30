@@ -375,6 +375,15 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
 
         if user_input is not None:
             _LOGGER.debug(f"[Binary Sensor Options] user_input: {user_input}")
+            for m in dict(self.config_entry.data).keys():
+                user_input.setdefault(m, self.config_entry.data[m])
+            _LOGGER.debug(f"[Binary Sensor Options] updated user_input: {user_input}")
+            self.config_entry.options = {}
+
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=user_input, options=self.config_entry.options
+            )
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data=user_input)
 
         BINARY_SENSOR_OPTIONS_SCHEMA = vol.Schema(

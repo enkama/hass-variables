@@ -178,7 +178,11 @@ class Variable(BinarySensorEntity, RestoreEntity):
         updated_attributes = None
         updated_value = None
 
-        if not replace_attributes and self._attr_extra_state_attributes is not None:
+        if (
+            not replace_attributes
+            and hasattr(self, "_attr_extra_state_attributes")
+            and self._attr_extra_state_attributes is not None
+        ):
             updated_attributes = dict(self._attr_extra_state_attributes)
 
         if attributes is not None:

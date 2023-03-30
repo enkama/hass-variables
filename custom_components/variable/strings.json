@@ -13,17 +13,17 @@
           "name": "[%key:common::config_flow::data::name%]",
           "variable_id": "Variable ID",
           "icon": "Icon",
-          "value": "Initial Value",
-          "attributes": "Initial Attributes",
+          "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update",
-          "device_class": "Device Class"
+          "force_update": "Force Update"
         },
         "description": "Create a new Sensor Variable"
       },
       "sensor_page_2": {
         "title": "Variables+History - Sensor Page 2",
         "data": {
+          "value": "Initial Value",
+          "attributes": "Initial Attributes",
           "state_class": "State Class",
           "unit_of_measurement": "Unit of Measurement"
         },

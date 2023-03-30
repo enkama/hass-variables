@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from enum import Enum
 import logging
 from typing import Any
 
@@ -19,7 +20,6 @@ import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 
 from .const import (
-    BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST,
     CONF_ATTRIBUTES,
     CONF_ENTITY_PLATFORM,
     CONF_FORCE_UPDATE,
@@ -31,7 +31,6 @@ from .const import (
     DEFAULT_RESTORE,
     DOMAIN,
     PLATFORMS,
-    SENSOR_DEVICE_CLASS_SELECT_LIST,
 )
 
 # sensor: SensorDeviceClass, DEVICE_CLASS_STATE_CLASSES, DEVICE_CLASS_UNITS
@@ -45,6 +44,24 @@ COMPONENT_CONFIG_URL = "https://github.com/Wibias/hass-variables"
 # translations/<lang>.json file and strings.json. See here for further information:
 # https://developers.home-assistant.io/docs/config_entries_config_flow_handler/#translations
 
+SENSOR_DEVICE_CLASS_SELECT_LIST = []
+SENSOR_DEVICE_CLASS_SELECT_LIST.append(
+    selector.SelectOptionDict(label="None", value="None")
+)
+for el in sensor.SensorDeviceClass:
+    SENSOR_DEVICE_CLASS_SELECT_LIST.append(
+        selector.SelectOptionDict(label=str(el.name), value=str(el.value))
+    )
+
+BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST = []
+BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST.append(
+    selector.SelectOptionDict(label="None", value="None")
+)
+for el in binary_sensor.BinarySensorDeviceClass:
+    BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST.append(
+        selector.SelectOptionDict(label=str(el.name), value=str(el.value))
+    )
+
 ADD_SENSOR_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_VARIABLE_ID): cv.string,
@@ -52,16 +69,6 @@ ADD_SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_ICON, default=DEFAULT_ICON): selector.IconSelector(
             selector.IconSelectorConfig()
         ),
-        vol.Optional(CONF_VALUE): cv.string,
-        vol.Optional(CONF_ATTRIBUTES): selector.ObjectSelector(
-            selector.ObjectSelectorConfig()
-        ),
-        vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
-            selector.BooleanSelectorConfig()
-        ),
-        vol.Optional(
-            CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
-        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
         vol.Optional(CONF_DEVICE_CLASS): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=SENSOR_DEVICE_CLASS_SELECT_LIST,
@@ -70,6 +77,12 @@ ADD_SENSOR_SCHEMA = vol.Schema(
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
         ),
+        vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
+            selector.BooleanSelectorConfig()
+        ),
+        vol.Optional(
+            CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
+        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
     }
 )
 
@@ -92,12 +105,6 @@ ADD_BINARY_SENSOR_SCHEMA = vol.Schema(
         vol.Optional(CONF_ATTRIBUTES): selector.ObjectSelector(
             selector.ObjectSelectorConfig()
         ),
-        vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
-            selector.BooleanSelectorConfig()
-        ),
-        vol.Optional(
-            CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
-        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
         vol.Optional(CONF_DEVICE_CLASS): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST,
@@ -106,6 +113,12 @@ ADD_BINARY_SENSOR_SCHEMA = vol.Schema(
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
         ),
+        vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
+            selector.BooleanSelectorConfig()
+        ),
+        vol.Optional(
+            CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
+        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
     }
 )
 
@@ -192,7 +205,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
         else:
             for el in sensor.DEVICE_CLASS_STATE_CLASSES.get(
-                self.add_sensor_input.get(CONF_DEVICE_CLASS)
+                self.add_sensor_input.get(CONF_DEVICE_CLASS), Enum
             ):
                 SENSOR_STATE_CLASS_SELECT_LIST.append(
                     selector.SelectOptionDict(label=str(el.name), value=str(el.value))
@@ -205,22 +218,85 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         SENSOR_UNITS_SELECT_LIST.append(
             selector.SelectOptionDict(label="None", value="None")
         )
+
+        # selector.TextSelectorType.
+        #    COLOR = "color"
+        #    DATE = "date"
+        #    DATETIME_LOCAL = "datetime-local"
+        #    EMAIL = "email"
+        #    MONTH = "month"
+        #    NUMBER = "number"
+        #    PASSWORD = "password"
+        #    SEARCH = "search"
+        #    TEL = "tel"
+        #    TEXT = "text"
+        #    TIME = "time"
+        #    URL = "url"
+        #    WEEK = "week"
+        SENSOR_PAGE_2_SCHEMA = vol.Schema({})
         if (
             self.add_sensor_input.get(CONF_DEVICE_CLASS) is not None
             and self.add_sensor_input.get(CONF_DEVICE_CLASS) != "None"
         ):
             for el in sensor.DEVICE_CLASS_UNITS.get(
-                self.add_sensor_input.get(CONF_DEVICE_CLASS)
+                self.add_sensor_input.get(CONF_DEVICE_CLASS), []
             ):
                 SENSOR_UNITS_SELECT_LIST.append(
                     selector.SelectOptionDict(label=str(el), value=str(el))
                 )
+
+            if self.add_sensor_input.get(CONF_DEVICE_CLASS) in [
+                sensor.SensorDeviceClass.DATE
+            ]:
+                SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
+                    {
+                        vol.Optional(CONF_VALUE): selector.DateSelector(
+                            selector.DateSelectorConfig()
+                        )
+                    }
+                )
+            elif self.add_sensor_input.get(CONF_DEVICE_CLASS) in [
+                sensor.SensorDeviceClass.TIMESTAMP
+            ]:
+                SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
+                    {
+                        vol.Optional(CONF_VALUE): selector.DateTimeSelector(
+                            selector.DateTimeSelectorConfig()
+                        )
+                    }
+                )
+            else:
+                SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
+                    {
+                        vol.Optional(CONF_VALUE): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                mode=selector.NumberSelectorMode.BOX
+                            )
+                        )
+                    }
+                )
+        else:
+            SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
+                {
+                    vol.Optional(CONF_VALUE): selector.TextSelector(
+                        selector.TextSelectorConfig()
+                    )
+                }
+            )
         _LOGGER.debug(
             f"[New Sensor Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
         )
 
         # newschema = schemavar.extend(addschema)
-        SENSOR_PAGE_2_SCHEMA = vol.Schema(
+
+        SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
+            {
+                vol.Optional(CONF_ATTRIBUTES): selector.ObjectSelector(
+                    selector.ObjectSelectorConfig()
+                )
+            }
+        )
+        SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
             {
                 vol.Optional(sensor.CONF_STATE_CLASS): selector.SelectSelector(
                     selector.SelectSelectorConfig(
@@ -229,17 +305,23 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         custom_value=False,
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
-                ),
-                vol.Optional(CONF_UNIT_OF_MEASUREMENT): selector.SelectSelector(
-                    selector.SelectSelectorConfig(
-                        options=SENSOR_UNITS_SELECT_LIST,
-                        multiple=False,
-                        custom_value=False,
-                        mode=selector.SelectSelectorMode.DROPDOWN,
-                    )
-                ),
+                )
             }
         )
+        if len(SENSOR_UNITS_SELECT_LIST) > 1:
+
+            SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
+                {
+                    vol.Optional(CONF_UNIT_OF_MEASUREMENT): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=SENSOR_UNITS_SELECT_LIST,
+                            multiple=False,
+                            custom_value=False,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                }
+            )
 
         # If there is no user input or there were errors, show the form again, including any errors that were found with the input.
         return self.async_show_form(
@@ -322,7 +404,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input=None, errors=None
     ) -> FlowResult:
 
-        # _LOGGER.debug("Starting Sensor Options")
         if user_input is not None:
             _LOGGER.debug(f"[Sensor Options] user_input: {user_input}")
 

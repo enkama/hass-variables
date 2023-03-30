@@ -29,7 +29,6 @@ from .const import (
     DEFAULT_REPLACE_ATTRIBUTES,
     DEFAULT_RESTORE,
     DOMAIN,
-    SENSOR_DEVICE_CLASS_SELECT_LIST,
 )
 
 _LOGGER = logging.getLogger(__name__)

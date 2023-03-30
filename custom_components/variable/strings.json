@@ -13,17 +13,17 @@
           "name": "[%key:common::config_flow::data::name%]",
           "variable_id": "Variable ID",
           "icon": "Icon",
-          "value": "Initial Value",
-          "attributes": "Initial Attributes",
+          "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update",
-          "device_class": "Device Class"
+          "force_update": "Force Update"
         },
         "description": "Create a new Sensor Variable"
       },
       "sensor_page_2": {
         "title": "Variables+History - Sensor Page 2",
         "data": {
+          "value": "Initial Value",
+          "attributes": "Initial Attributes",
           "state_class": "State Class",
           "unit_of_measurement": "Unit of Measurement"
         },
@@ -37,12 +37,16 @@
           "icon": "Icon",
           "value": "Initial Value",
           "attributes": "Initial Attributes",
+          "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update",
-          "device_class": "Device Class"
+          "force_update": "Force Update"
         },
         "description": "Create a new Binary Sensor Variable"
       }
+    },
+    "error": {
+      "invalid_value_type": "The value entered is not compatible with the selected device_class",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   },
   "options": {
@@ -51,10 +55,19 @@
       "sensor_options": {
         "title": "Variables+History - Sensor",
         "data": {
-          "value": "Value (typically only useful if Restore on Restart is False)",
-          "attributes": "Attributes (typically only useful if Restore on Restart is False)",
+          "device_class": "Device Class",
           "restore": "Restore on Restart",
           "force_update": "Force Update"
+        },
+        "description": "Update existing Variable Sensor"
+      },
+      "sensor_options_page_2": {
+        "title": "Variables+History - Sensor Page 2",
+        "data": {
+          "value": "Value (typically only useful if Restore on Restart is False)",
+          "attributes": "Attributes (typically only useful if Restore on Restart is False)",
+          "state_class": "State Class",
+          "unit_of_measurement": "Unit of Measurement"
         },
         "description": "Update existing Variable Sensor"
       },
@@ -63,11 +76,16 @@
         "data": {
           "value": "Value (typically only useful if Restore on Restart is False)",
           "attributes": "Attributes (typically only useful if Restore on Restart is False)",
+          "device_class": "Device Class",
           "restore": "Restore on Restart",
           "force_update": "Force Update"
         },
         "description": "Update existing Variable Binary Sensor"
       }
+    },
+    "error": {
+      "invalid_value_type": "The value entered is not compatible with the selected device_class",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   },
   "issues": {

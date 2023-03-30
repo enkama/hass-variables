@@ -45,6 +45,7 @@ update_binary_sensor:
           mode: list
           translation_key: "boolean_options"
           options:
+            - "None"
             - "true"
             - "false"
     attributes:

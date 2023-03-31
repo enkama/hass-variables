@@ -86,19 +86,10 @@
     "error": {
       "invalid_value_type": "The value entered is not compatible with the selected device_class: {device_class}. Expected {value_type}.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
-    }
-  },
-  "issues": {
-    "restart_required_variable": {
-      "title": "Delete the Variable YAML configuration and restart",
-      "fix_flow": {
-        "step": {
-          "confirm_restart": {
-            "title": "Delete the Variable YAML configuration and restart",
-            "description": "Your existing YAML configuration has been imported into the UI automatically.\n\nRemove the Variable YAML configuration from your configuration.yaml file and restart Home Assistant to fix this issue.\n\nClick Submit to Restart Home Assistant."
-          }
-        }
-      }
+    },
+    "abort": {
+      "yaml_variable": "Cannot change options here for Variables created by YAML.\n\nTo use the User Interface to manage this Variable, you will need to:\n1. Remove it from YAML\n2. Delete the imported Variable entity from Home Assistant\n3. Restart Home Assistant\n4. Manually recreate it in Home Assistant, Integrations, +Add Integration.",
+      "yaml_update_error": "Unable to update YAML Sensor Variable"
     }
   },
   "selector": {

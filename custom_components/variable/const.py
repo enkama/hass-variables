@@ -17,6 +17,7 @@ CONF_RESTORE = "restore"
 CONF_VALUE = "value"
 CONF_VALUE_TYPE = "value_type"
 CONF_VARIABLE_ID = "variable_id"
+CONF_YAML_VARIABLE = "yaml_variable"
 
 ATTR_ATTRIBUTES = "attributes"
 ATTR_ENTITY = "entity"

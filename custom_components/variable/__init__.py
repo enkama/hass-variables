@@ -2,18 +2,12 @@
 import json
 import logging
 
-import voluptuous as vol
-
-from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
-from homeassistant.const import (
-    CONF_FRIENDLY_NAME,
-    CONF_ICON,
-    CONF_NAME,
-    Platform,
-)
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
+from homeassistant.const import CONF_FRIENDLY_NAME, CONF_ICON, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.typing import ConfigType
+import voluptuous as vol
 
 from .const import (
     ATTR_ATTRIBUTES,
@@ -33,15 +27,6 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-
-try:
-    USE_ISSUE_REG = True
-    from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
-except ImportError as e:
-    _LOGGER.debug(
-        f"Unknown Exception trying to import issue_registry. Is HA version <2022.9?: {e}"
-    )
-    USE_ISSUE_REG = False
 
 SERVICE_SET_VARIABLE_LEGACY = "set_variable"
 SERVICE_SET_ENTITY_LEGACY = "set_entity"
@@ -71,8 +56,6 @@ SERVICE_SET_ENTITY_LEGACY_SCHEMA = vol.Schema(
 
 async def async_setup(hass: HomeAssistant, config: ConfigType):
     """Set up the Variable services."""
-    # _LOGGER.debug("Starting async_setup")
-    # _LOGGER.debug("[async_setup] config: " + str(config))
 
     async def async_set_variable_legacy_service(call):
         """Handle calls to the set_variable legacy service."""
@@ -150,9 +133,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
                     new_attr = pre_attr
             else:
                 new_attr = call.data.get(ATTR_ATTRIBUTES)
-            _LOGGER.debug(
-                f"[async_set_entity_legacy_service] Updated attr: {new_attr}"
-            )
+            _LOGGER.debug(f"[async_set_entity_legacy_service] Updated attr: {new_attr}")
             hass.states.async_set(
                 entity_id=entity_id,
                 new_state=call.data.get(ATTR_VALUE),
@@ -183,25 +164,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
 
     variables = json.loads(json.dumps(config.get(DOMAIN, {})))
 
-    if variables and USE_ISSUE_REG:
-        async_create_issue(
-            hass,
-            DOMAIN,
-            "restart_required_variable",
-            is_fixable=True,
-            severity=IssueSeverity.WARNING,
-            translation_key="restart_required_variable",
-        )
-
     for var, var_fields in variables.items():
-        if var is not None and var not in {
-            entry.data.get(CONF_VARIABLE_ID)
-            for entry in hass.config_entries.async_entries(DOMAIN)
-        }:
-            _LOGGER.warning(f"[YAML Import] New YAML sensor, importing: {var}")
-            _LOGGER.debug(f"[YAML Import] var_fields: {var_fields}")
 
-            for key_empty, var_empty in var_fields.items():
+        if var is not None:
+            _LOGGER.debug(f"[YAML] variable_id: {var}")
+            _LOGGER.debug(f"[YAML] var_fields: {var_fields}")
+
+            for key_empty, var_empty in var_fields.copy().items():
                 if var_empty is None:
                     var_fields.pop(key_empty)
 
@@ -210,24 +179,54 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
             name = var_fields.get(CONF_NAME, attr.pop(CONF_FRIENDLY_NAME, None))
             attr.pop(CONF_FRIENDLY_NAME, None)
 
-            hass.async_create_task(
-                hass.config_entries.flow.async_init(
-                    DOMAIN,
-                    context={"source": SOURCE_IMPORT},
-                    data={
-                        CONF_ENTITY_PLATFORM: Platform.SENSOR,
-                        CONF_VARIABLE_ID: var,
-                        CONF_NAME: name,
-                        CONF_VALUE: var_fields.get(CONF_VALUE),
-                        CONF_RESTORE: var_fields.get(CONF_RESTORE),
-                        CONF_FORCE_UPDATE: var_fields.get(CONF_FORCE_UPDATE),
-                        CONF_ATTRIBUTES: attr,
-                        CONF_ICON: icon,
-                    },
+            if var not in {
+                entry.data.get(CONF_VARIABLE_ID)
+                for entry in hass.config_entries.async_entries(DOMAIN)
+            }:
+                _LOGGER.warning(f"[YAML Import] Creating New Sensor Variable: {var}")
+                hass.async_create_task(
+                    hass.config_entries.flow.async_init(
+                        DOMAIN,
+                        context={"source": SOURCE_IMPORT},
+                        data={
+                            CONF_ENTITY_PLATFORM: Platform.SENSOR,
+                            CONF_VARIABLE_ID: var,
+                            CONF_NAME: name,
+                            CONF_VALUE: var_fields.get(CONF_VALUE),
+                            CONF_RESTORE: var_fields.get(CONF_RESTORE),
+                            CONF_FORCE_UPDATE: var_fields.get(CONF_FORCE_UPDATE),
+                            CONF_ATTRIBUTES: attr,
+                            CONF_ICON: icon,
+                        },
+                    )
                 )
-            )
-        else:
-            _LOGGER.info(f"[YAML Import] Already Imported: {var}")
+            else:
+                _LOGGER.info(f"[YAML Update] Updating Existing Sensor Variable: {var}")
+
+                entry_id = None
+                for ent in hass.config_entries.async_entries(DOMAIN):
+                    if var == ent.data.get(CONF_VARIABLE_ID):
+                        entry_id = ent.entry_id
+                        break
+                _LOGGER.debug(f"[YAML Update] entry_id: {entry_id}")
+                if entry_id:
+                    entry = ent
+                    _LOGGER.debug(f"[YAML Update] entry before: {entry.as_dict()}")
+
+                    for m in dict(entry.data).keys():
+                        var_fields.setdefault(m, entry.data[m])
+                    _LOGGER.debug(f"[YAML Update] updated var_fields: {var_fields}")
+                    entry.options = {}
+                    hass.config_entries.async_update_entry(
+                        entry, data=var_fields, options=entry.options
+                    )
+
+                    hass.config_entries.async_reload(entry_id)
+
+                else:
+                    _LOGGER.error(
+                        f"YAML Update Error. Could not find entry_id for: {var}"
+                    )
 
     return True
 
@@ -252,6 +251,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.info(f"Unloading: {entry.data}")
     hass_data = dict(entry.data)
+    unload_ok = False
     if hass_data.get(CONF_ENTITY_PLATFORM) in PLATFORMS:
         unload_ok = await hass.config_entries.async_unload_platforms(
             entry, [hass_data.get(CONF_ENTITY_PLATFORM)]

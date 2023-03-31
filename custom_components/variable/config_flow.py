@@ -327,8 +327,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                 }
             )
-        if user_input is None:
-            user_input = {}
+
         _LOGGER.debug(f"[New Sensor Page 2] value_type: {value_type}")
         self.add_sensor_input.update({CONF_VALUE_TYPE: value_type})
         if self.add_sensor_input.get(CONF_NAME) is None or self.add_sensor_input.get(
@@ -424,27 +423,23 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
 
         if user_input is not None:
-            _LOGGER.debug(f"[Sensor Options] user_input: {user_input}")
-
-            for m in dict(self.config_entry.data).keys():
-                user_input.setdefault(m, self.config_entry.data[m])
-            _LOGGER.debug(f"[Sensor Options] updated user_input: {user_input}")
-            self.config_entry.options = {}
-
-            self.hass.config_entries.async_update_entry(
-                self.config_entry, data=user_input, options=self.config_entry.options
-            )
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
-            return self.async_create_entry(title="", data=user_input)
+            _LOGGER.debug(f"[Sensor Options Page 1] page_1_input: {user_input}")
+            self.sensor_options_page_1 = user_input
+            return await self.async_step_sensor_options_page_2()
 
         SENSOR_OPTIONS_SCHEMA = vol.Schema(
             {
                 vol.Optional(
-                    CONF_VALUE, default=self.config_entry.data.get(CONF_VALUE)
-                ): cv.string,
-                vol.Optional(
-                    CONF_ATTRIBUTES, default=self.config_entry.data.get(CONF_ATTRIBUTES)
-                ): selector.ObjectSelector(selector.ObjectSelectorConfig()),
+                    CONF_DEVICE_CLASS,
+                    default=self.config_entry.data.get(CONF_DEVICE_CLASS),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=SENSOR_DEVICE_CLASS_SELECT_LIST,
+                        multiple=False,
+                        custom_value=False,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
                 vol.Optional(
                     CONF_RESTORE,
                     default=self.config_entry.data.get(CONF_RESTORE, DEFAULT_RESTORE),
@@ -457,14 +452,250 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
             }
         )
+        if self.config_entry.data.get(CONF_NAME) is None or self.config_entry.data.get(
+            CONF_NAME
+        ) == self.config_entry.data.get(CONF_VARIABLE_ID):
+            disp_name = self.config_entry.data.get(CONF_VARIABLE_ID)
+        else:
+            disp_name = f"{self.config_entry.data.get(CONF_NAME)} ({self.config_entry.data.get(CONF_VARIABLE_ID)})"
 
         return self.async_show_form(
             step_id="sensor_options",
             data_schema=SENSOR_OPTIONS_SCHEMA,
             description_placeholders={
                 "component_config_url": COMPONENT_CONFIG_URL,
-                "entity_name": self.config_entry.data.get(
-                    CONF_NAME, self.config_entry.data.get(CONF_VARIABLE_ID)
+                "disp_name": disp_name,
+            },
+        )
+
+    async def async_step_sensor_options_page_2(self, user_input=None):
+        errors = {}
+        if user_input is not None:
+            _LOGGER.debug(f"[Sensor Options Page 2] user_input: {user_input}")
+            try:
+                newval = value_to_type(
+                    user_input.get(CONF_VALUE),
+                    self.sensor_options_page_1.get(CONF_VALUE_TYPE),
+                )
+            except ValueError:
+                errors["base"] = "invalid_value_type"
+            else:
+                user_input[CONF_VALUE] = newval
+
+            _LOGGER.debug(
+                f"[Sensor Options Page 2] value_type: {self.sensor_options_page_1.get(CONF_VALUE_TYPE)}"
+            )
+            _LOGGER.debug(
+                f"[Sensor Options Page 2] type of value: {type(user_input.get(CONF_VALUE))}"
+            )
+
+            if not errors:
+                if (
+                    self.sensor_options_page_1 is not None
+                    and self.sensor_options_page_1
+                ):
+                    user_input.update(self.sensor_options_page_1)
+                if user_input is not None:
+                    for k, v in list(user_input.items()):
+                        if v is None or v == "None":
+                            user_input.pop(k, None)
+                for m in dict(self.config_entry.data).keys():
+                    user_input.setdefault(m, self.config_entry.data[m])
+                _LOGGER.debug(f"[Sensor Options Page 2] Final user_input: {user_input}")
+                self.config_entry.options = {}
+
+                self.hass.config_entries.async_update_entry(
+                    self.config_entry,
+                    data=user_input,
+                    options=self.config_entry.options,
+                )
+                await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+                return self.async_create_entry(title="", data=user_input)
+
+        _LOGGER.debug(f"[Sensor Options Page 2] Initial user_input: {user_input}")
+        _LOGGER.debug(
+            f"[Sensor Options Page 2] device_class: {self.sensor_options_page_1.get(CONF_DEVICE_CLASS)}"
+        )
+
+        SENSOR_STATE_CLASS_SELECT_LIST = []
+        SENSOR_STATE_CLASS_SELECT_LIST.append(
+            selector.SelectOptionDict(label="None", value="None")
+        )
+        SENSOR_UNITS_SELECT_LIST = []
+        SENSOR_UNITS_SELECT_LIST.append(
+            selector.SelectOptionDict(label="None", value="None")
+        )
+
+        SENSOR_OPTIONS_PAGE_2_SCHEMA = vol.Schema({})
+        if (
+            self.sensor_options_page_1.get(CONF_DEVICE_CLASS) is not None
+            and self.sensor_options_page_1.get(CONF_DEVICE_CLASS) != "None"
+        ):
+            for el in sensor.DEVICE_CLASS_STATE_CLASSES.get(
+                self.sensor_options_page_1.get(CONF_DEVICE_CLASS), Enum
+            ):
+                SENSOR_STATE_CLASS_SELECT_LIST.append(
+                    selector.SelectOptionDict(label=str(el.name), value=str(el.value))
+                )
+            for el in sensor.DEVICE_CLASS_UNITS.get(
+                self.sensor_options_page_1.get(CONF_DEVICE_CLASS), []
+            ):
+                SENSOR_UNITS_SELECT_LIST.append(
+                    selector.SelectOptionDict(label=str(el), value=str(el))
+                )
+
+            if self.sensor_options_page_1.get(CONF_DEVICE_CLASS) in [
+                sensor.SensorDeviceClass.DATE
+            ]:
+                SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
+                    {
+                        vol.Optional(
+                            CONF_VALUE,
+                            default=self.config_entry.data.get(CONF_VALUE)
+                            if (
+                                self.config_entry.data.get(CONF_DEVICE_CLASS)
+                                == self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
+                            )
+                            else None,
+                        ): selector.DateSelector(selector.DateSelectorConfig())
+                    }
+                )
+                value_type = "date"
+            elif self.sensor_options_page_1.get(CONF_DEVICE_CLASS) in [
+                sensor.SensorDeviceClass.TIMESTAMP
+            ]:
+                SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
+                    {
+                        vol.Optional(
+                            CONF_VALUE,
+                            default=self.config_entry.data.get(CONF_VALUE)
+                            if (
+                                self.config_entry.data.get(CONF_DEVICE_CLASS)
+                                == self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
+                            )
+                            else None,
+                        ): selector.DateTimeSelector(selector.DateTimeSelectorConfig())
+                    }
+                )
+                value_type = "datetime"
+            else:
+                SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
+                    {
+                        vol.Optional(
+                            CONF_VALUE,
+                            default=self.config_entry.data.get(CONF_VALUE)
+                            if (
+                                self.config_entry.data.get(CONF_DEVICE_CLASS)
+                                == self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
+                            )
+                            else None,
+                        ): selector.TextSelector(selector.TextSelectorConfig())
+                    }
+                )
+                value_type = "number"
+        else:
+            for el in sensor.SensorStateClass:
+                SENSOR_STATE_CLASS_SELECT_LIST.append(
+                    selector.SelectOptionDict(label=str(el.name), value=str(el.value))
+                )
+
+            SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_VALUE,
+                        default=self.config_entry.data.get(CONF_VALUE)
+                        if (
+                            self.config_entry.data.get(CONF_DEVICE_CLASS)
+                            == self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
+                        )
+                        else None,
+                    ): selector.TextSelector(selector.TextSelectorConfig())
+                }
+            )
+            value_type = "string"
+
+        _LOGGER.debug(
+            f"[Sensor Options Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
+        )
+        _LOGGER.debug(
+            f"[Sensor Options Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
+        )
+
+        SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
+            {
+                vol.Optional(
+                    CONF_ATTRIBUTES, default=self.config_entry.data.get(CONF_ATTRIBUTES)
+                ): selector.ObjectSelector(selector.ObjectSelectorConfig())
+            }
+        )
+        if len(SENSOR_STATE_CLASS_SELECT_LIST) > 1:
+            SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        sensor.CONF_STATE_CLASS,
+                        default=self.config_entry.data.get(sensor.CONF_STATE_CLASS)
+                        if (
+                            self.config_entry.data.get(CONF_DEVICE_CLASS)
+                            == self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
+                        )
+                        else None,
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=SENSOR_STATE_CLASS_SELECT_LIST,
+                            multiple=False,
+                            custom_value=False,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                }
+            )
+        else:
+            self.sensor_options_page_1[sensor.CONF_STATE_CLASS] = None
+
+        if len(SENSOR_UNITS_SELECT_LIST) > 1:
+            SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_UNIT_OF_MEASUREMENT,
+                        default=self.config_entry.data.get(CONF_UNIT_OF_MEASUREMENT)
+                        if (
+                            self.config_entry.data.get(CONF_DEVICE_CLASS)
+                            == self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
+                        )
+                        else None,
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=SENSOR_UNITS_SELECT_LIST,
+                            multiple=False,
+                            custom_value=False,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    )
+                }
+            )
+        else:
+            self.sensor_options_page_1[CONF_UNIT_OF_MEASUREMENT] = None
+
+        if self.sensor_options_page_1.get(
+            CONF_NAME
+        ) is None or self.sensor_options_page_1.get(
+            CONF_NAME
+        ) == self.sensor_options_page_1.get(
+            CONF_VARIABLE_ID
+        ):
+            disp_name = self.sensor_options_page_1.get(CONF_VARIABLE_ID)
+        else:
+            disp_name = f"{self.sensor_options_page_1.get(CONF_NAME)} ({self.sensor_options_page_1.get(CONF_VARIABLE_ID)})"
+        _LOGGER.debug(f"[Sensor Options Page 2] value_type: {value_type}")
+        self.sensor_options_page_1.update({CONF_VALUE_TYPE: value_type})
+        return self.async_show_form(
+            step_id="sensor_options_page_2",
+            data_schema=SENSOR_OPTIONS_PAGE_2_SCHEMA,
+            description_placeholders={
+                "disp_name": disp_name,
+                "value_type": value_type,
+                "device_class": self.sensor_options_page_1.get(
+                    CONF_DEVICE_CLASS, "None"
                 ),
             },
         )

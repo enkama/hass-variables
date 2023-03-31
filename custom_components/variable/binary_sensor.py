@@ -19,7 +19,6 @@ from .const import (
     CONF_RESTORE,
     CONF_VALUE,
     CONF_VARIABLE_ID,
-    CONF_YAML_VARIABLE,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_ICON,
     DEFAULT_REPLACE_ATTRIBUTES,
@@ -117,10 +116,18 @@ class Variable(BinarySensorEntity, RestoreEntity):
         self._attr_extra_state_attributes = config.get(CONF_ATTRIBUTES)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
-        self._yaml_variable = config.get(CONF_YAML_VARIABLE)
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
+        # _LOGGER.debug(f"[init] name: {self._attr_name}")
+        # _LOGGER.debug(f"[init] variable_id: {self._variable_id}")
+        # _LOGGER.debug(f"[init] entity_id: {self.entity_id}")
+        # _LOGGER.debug(f"[init] unique_id: {self._attr_unique_id}")
+        # _LOGGER.debug(f"[init] icon: {self._attr_icon}")
+        # _LOGGER.debug(f"[init] value: {self._attr_is_on}")
+        # _LOGGER.debug(f"[init] attributes: {self._attr_extra_state_attributes}")
+        # _LOGGER.debug(f"[init] restore: {self._restore}")
+        # _LOGGER.debug(f"[init] force_update: {self._force_update}")
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -129,7 +136,9 @@ class Variable(BinarySensorEntity, RestoreEntity):
             _LOGGER.info(f"({self._attr_name}) Restoring after Reboot")
             state = await self.async_get_last_state()
             if state:
-                _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
+                _LOGGER.debug(
+                    f"({self._attr_name}) Restored state: {state.as_dict()}"
+                )
                 self._attr_extra_state_attributes = state.attributes
                 if state.state == STATE_OFF:
                     self._attr_is_on = False
@@ -162,11 +171,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
         updated_attributes = None
         updated_value = None
 
-        if (
-            not replace_attributes
-            and hasattr(self, "_attr_extra_state_attributes")
-            and self._attr_extra_state_attributes is not None
-        ):
+        if not replace_attributes and self._attr_extra_state_attributes is not None:
             updated_attributes = dict(self._attr_extra_state_attributes)
 
         if attributes is not None:

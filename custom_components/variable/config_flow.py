@@ -18,7 +18,6 @@ from .const import (
     CONF_RESTORE,
     CONF_VALUE,
     CONF_VARIABLE_ID,
-    CONF_YAML_VARIABLE,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_ICON,
     DEFAULT_RESTORE,
@@ -106,14 +105,11 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             menu_options=["add_" + p for p in PLATFORMS],
         )
 
-    async def async_step_add_sensor(
-        self, user_input=None, errors=None, yaml_variable=False
-    ):
+    async def async_step_add_sensor(self, user_input=None, errors=None):
         if user_input is not None:
 
             try:
                 user_input.update({CONF_ENTITY_PLATFORM: Platform.SENSOR})
-                user_input.update({CONF_YAML_VARIABLE: yaml_variable})
                 info = await validate_sensor_input(self.hass, user_input)
                 _LOGGER.debug(f"[New Sensor Variable] info: {info}")
                 _LOGGER.debug(f"[New Sensor Variable] user_input: {user_input}")
@@ -136,14 +132,11 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
-    async def async_step_add_binary_sensor(
-        self, user_input=None, errors=None, yaml_variable=False
-    ):
+    async def async_step_add_binary_sensor(self, user_input=None, errors=None):
         if user_input is not None:
 
             try:
                 user_input.update({CONF_ENTITY_PLATFORM: Platform.BINARY_SENSOR})
-                user_input.update({CONF_YAML_VARIABLE: yaml_variable})
                 info = await validate_sensor_input(self.hass, user_input)
                 _LOGGER.debug(f"[New Binary Sensor Variable] info: {info}")
                 _LOGGER.debug(f"[Sensor Options] updated user_input: {user_input}")
@@ -171,9 +164,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Import a config entry from configuration.yaml."""
 
         # _LOGGER.debug(f"[async_step_import] import_config: {import_config)}")
-        return await self.async_step_add_sensor(
-            user_input=import_config, yaml_variable=True
-        )
+        return await self.async_step_add_sensor(import_config)
 
     @staticmethod
     @callback
@@ -200,25 +191,22 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         # _LOGGER.debug(f"[Options] initial config: {self.config_entry.data)}")
         # _LOGGER.debug(f"[Options] initial options: {self.config_entry.options)}")
 
-        if not self.config_entry.data.get(CONF_YAML_VARIABLE):
-            if self.config_entry.data.get(CONF_ENTITY_PLATFORM) in PLATFORMS and (
-                new_func := getattr(
-                    self,
-                    "async_step_"
-                    + self.config_entry.data.get(CONF_ENTITY_PLATFORM)
-                    + "_options",
-                    False,
-                )
-            ):
-                return await new_func()
-        else:
-            _LOGGER.debug("No Options for YAML Created Variables")
-            return self.async_abort(reason="yaml_variable")
+        if self.config_entry.data.get(CONF_ENTITY_PLATFORM) in PLATFORMS and (
+            new_func := getattr(
+                self,
+                "async_step_"
+                + self.config_entry.data.get(CONF_ENTITY_PLATFORM)
+                + "_options",
+                False,
+            )
+        ):
+            return await new_func()
 
     async def async_step_sensor_options(
         self, user_input=None, errors=None
     ) -> FlowResult:
 
+        # _LOGGER.debug("Starting Sensor Options")
         if user_input is not None:
             _LOGGER.debug(f"[Sensor Options] user_input: {user_input}")
 
@@ -271,15 +259,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
 
         if user_input is not None:
             _LOGGER.debug(f"[Binary Sensor Options] user_input: {user_input}")
-            for m in dict(self.config_entry.data).keys():
-                user_input.setdefault(m, self.config_entry.data[m])
-            _LOGGER.debug(f"[Binary Sensor Options] updated user_input: {user_input}")
-            self.config_entry.options = {}
-
-            self.hass.config_entries.async_update_entry(
-                self.config_entry, data=user_input, options=self.config_entry.options
-            )
-            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
             return self.async_create_entry(title="", data=user_input)
 
         BINARY_SENSOR_OPTIONS_SCHEMA = vol.Schema(

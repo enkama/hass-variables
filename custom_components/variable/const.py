@@ -16,7 +16,6 @@ CONF_FORCE_UPDATE = "force_update"
 CONF_RESTORE = "restore"
 CONF_VALUE = "value"
 CONF_VARIABLE_ID = "variable_id"
-CONF_YAML_VARIABLE = "yaml_variable"
 
 ATTR_ATTRIBUTES = "attributes"
 ATTR_ENTITY = "entity"

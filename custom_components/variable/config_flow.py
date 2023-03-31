@@ -51,9 +51,10 @@ SENSOR_DEVICE_CLASS_SELECT_LIST.append(
     selector.SelectOptionDict(label="None", value="None")
 )
 for el in sensor.SensorDeviceClass:
-    SENSOR_DEVICE_CLASS_SELECT_LIST.append(
-        selector.SelectOptionDict(label=str(el.name), value=str(el.value))
-    )
+    if el != sensor.SensorDeviceClass.ENUM:
+        SENSOR_DEVICE_CLASS_SELECT_LIST.append(
+            selector.SelectOptionDict(label=str(el.name), value=str(el.value))
+        )
 
 BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST = []
 BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST.append(
@@ -285,12 +286,12 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             value_type = "string"
 
-        _LOGGER.debug(
-            f"[New Sensor Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
-        )
-        _LOGGER.debug(
-            f"[New Sensor Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
-        )
+        # _LOGGER.debug(
+        #    f"[New Sensor Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
+        # )
+        # _LOGGER.debug(
+        #    f"[New Sensor Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
+        # )
 
         SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
             {
@@ -643,12 +644,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     }
                 )
 
-        _LOGGER.debug(
-            f"[Sensor Options Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
-        )
-        _LOGGER.debug(
-            f"[Sensor Options Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
-        )
+        # _LOGGER.debug(
+        #    f"[Sensor Options Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
+        # )
+        # _LOGGER.debug(
+        #    f"[Sensor Options Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
+        # )
 
         SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
             {

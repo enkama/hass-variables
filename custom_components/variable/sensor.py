@@ -150,9 +150,9 @@ class Variable(RestoreSensor):
                     f"({self._attr_name}) Restored sensor: {sensor.as_dict()}"
                 )
                 self._attr_native_value = sensor.native_value
-                self._attr_native_unit_of_measurement = (
-                    sensor.native_unit_of_measurement
-                )
+                # self._attr_native_unit_of_measurement = (
+                #    sensor.native_unit_of_measurement
+                # )
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
@@ -218,6 +218,13 @@ class Variable(RestoreSensor):
         self._attr_extra_state_attributes = updated_attributes
 
         if updated_value is not None:
-            self._attr_native_value = updated_value
+            try:
+                newval = value_to_type(updated_value, self._value_type)
+            except ValueError:
+                ERROR = f"The value entered is not compatible with the selected device_class: {self._attr_device_class}. Expected {self._value_type}."
+                _LOGGER.error(ERROR)
+                raise ValueError(ERROR)
+            else:
+                self._attr_native_value = newval
 
         await self.async_update_ha_state()

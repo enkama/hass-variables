@@ -37,9 +37,9 @@
           "icon": "Icon",
           "value": "Initial Value",
           "attributes": "Initial Attributes",
+          "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update",
-          "device_class": "Device Class"
+          "force_update": "Force Update"
         },
         "description": "Create a new Binary Sensor Variable"
       }
@@ -76,6 +76,7 @@
         "data": {
           "value": "Value (typically only useful if Restore on Restart is False)",
           "attributes": "Attributes (typically only useful if Restore on Restart is False)",
+          "device_class": "Device Class",
           "restore": "Restore on Restart",
           "force_update": "Force Update"
         },

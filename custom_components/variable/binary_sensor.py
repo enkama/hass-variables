@@ -6,7 +6,6 @@ from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
-    CONF_UNIT_OF_MEASUREMENT,
     STATE_OFF,
     STATE_ON,
     Platform,
@@ -122,6 +121,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
         self._attr_icon = config.get(CONF_ICON)
         self._attr_is_on = bool_val
         self._attr_extra_state_attributes = config.get(CONF_ATTRIBUTES)
+        self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self.entity_id = generate_entity_id(

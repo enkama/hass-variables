@@ -710,16 +710,13 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         else:
             self.sensor_options_page_1[CONF_UNIT_OF_MEASUREMENT] = None
 
-        if self.sensor_options_page_1.get(
+        if self.config_entry.data.get(CONF_NAME) is None or self.config_entry.data.get(
             CONF_NAME
-        ) is None or self.sensor_options_page_1.get(
-            CONF_NAME
-        ) == self.sensor_options_page_1.get(
-            CONF_VARIABLE_ID
-        ):
-            disp_name = self.sensor_options_page_1.get(CONF_VARIABLE_ID)
+        ) == self.config_entry.data.get(CONF_VARIABLE_ID):
+            disp_name = self.config_entry.data.get(CONF_VARIABLE_ID)
         else:
-            disp_name = f"{self.sensor_options_page_1.get(CONF_NAME)} ({self.sensor_options_page_1.get(CONF_VARIABLE_ID)})"
+            disp_name = f"{self.config_entry.data.get(CONF_NAME)} ({self.config_entry.data.get(CONF_VARIABLE_ID)})"
+
         _LOGGER.debug(f"[Sensor Options Page 2] value_type: {value_type}")
         self.sensor_options_page_1.update({CONF_VALUE_TYPE: value_type})
         return self.async_show_form(
@@ -769,6 +766,17 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_ATTRIBUTES, default=self.config_entry.data.get(CONF_ATTRIBUTES)
                 ): selector.ObjectSelector(selector.ObjectSelectorConfig()),
                 vol.Optional(
+                    CONF_DEVICE_CLASS,
+                    default=self.config_entry.data.get(CONF_DEVICE_CLASS, "None"),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=BINARY_SENSOR_DEVICE_CLASS_SELECT_LIST,
+                        multiple=False,
+                        custom_value=False,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
+                ),
+                vol.Optional(
                     CONF_RESTORE,
                     default=self.config_entry.data.get(CONF_RESTORE, DEFAULT_RESTORE),
                 ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
@@ -781,13 +789,18 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             }
         )
 
+        if self.config_entry.data.get(CONF_NAME) is None or self.config_entry.data.get(
+            CONF_NAME
+        ) == self.config_entry.data.get(CONF_VARIABLE_ID):
+            disp_name = self.config_entry.data.get(CONF_VARIABLE_ID)
+        else:
+            disp_name = f"{self.config_entry.data.get(CONF_NAME)} ({self.config_entry.data.get(CONF_VARIABLE_ID)})"
+
         return self.async_show_form(
             step_id="binary_sensor_options",
             data_schema=BINARY_SENSOR_OPTIONS_SCHEMA,
             description_placeholders={
                 "component_config_url": COMPONENT_CONFIG_URL,
-                "entity_name": self.config_entry.data.get(
-                    CONF_NAME, self.config_entry.data.get(CONF_VARIABLE_ID)
-                ),
+                "disp_name": disp_name,
             },
         )

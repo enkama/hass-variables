@@ -15,6 +15,7 @@ CONF_ENTITY_PLATFORM = "entity_platform"
 CONF_FORCE_UPDATE = "force_update"
 CONF_RESTORE = "restore"
 CONF_VALUE = "value"
+CONF_VALUE_TYPE = "value_type"
 CONF_VARIABLE_ID = "variable_id"
 
 ATTR_ATTRIBUTES = "attributes"

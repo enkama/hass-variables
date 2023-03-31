@@ -1,6 +1,10 @@
 import logging
 
-from homeassistant.components.sensor import PLATFORM_SCHEMA, RestoreSensor
+from homeassistant.components.sensor import (
+    CONF_STATE_CLASS,
+    PLATFORM_SCHEMA,
+    RestoreSensor,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
@@ -23,6 +27,7 @@ from .const import (
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
     CONF_VALUE,
+    CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_ICON,
@@ -30,6 +35,7 @@ from .const import (
     DEFAULT_RESTORE,
     DOMAIN,
 )
+from .helpers import value_to_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -116,6 +122,10 @@ class Variable(RestoreSensor):
             self._attr_extra_state_attributes = config.get(CONF_ATTRIBUTES)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
+        self._value_type = config.get(CONF_VALUE_TYPE)
+        self._attr_device_class = config.get(CONF_DEVICE_CLASS)
+        self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
+        self._attr_state_class = config.get(CONF_STATE_CLASS)
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
@@ -140,6 +150,9 @@ class Variable(RestoreSensor):
                     f"({self._attr_name}) Restored sensor: {sensor.as_dict()}"
                 )
                 self._attr_native_value = sensor.native_value
+                self._attr_native_unit_of_measurement = (
+                    sensor.native_unit_of_measurement
+                )
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
@@ -149,16 +162,21 @@ class Variable(RestoreSensor):
                 # Setting Restored state to override native_value for now.
                 # self._state = state.state
                 if sensor is None or (
-                    sensor
-                    and state.state is not None
-                    and state.state.lower() != "none"
-                    and sensor.native_value != state.state
+                    sensor and state.state is not None and state.state.lower() != "none"
                 ):
-                    _LOGGER.info(
-                        f"({self._attr_name}) Restored values are different. "
-                        f"native_value: {sensor.native_value} | state: {state.state}"
-                    )
-                    self._attr_native_value = state.state
+
+                    try:
+                        newval = value_to_type(state.state, self._value_type)
+                    except ValueError:
+                        newval = state.state
+
+                    _LOGGER.debug(f"({self._attr_name}) Updated state: |{newval}|")
+                    if sensor.native_value != newval:
+                        _LOGGER.info(
+                            f"({self._attr_name}) Restored values are different. "
+                            f"native_value: {sensor.native_value} | state: {newval}"
+                        )
+                        self._attr_native_value = newval
 
     @property
     def should_poll(self):

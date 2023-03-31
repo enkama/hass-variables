@@ -27,7 +27,7 @@
           "state_class": "State Class",
           "unit_of_measurement": "Unit of Measurement"
         },
-        "description": "Create a new Sensor Variable Page 2"
+        "description": "Create a new Sensor Variable Page 2\n\n**Variable:&nbsp;{disp_name}**\n**Device Class:&nbsp;{device_class}**\n**Value Type:&nbsp;{value_type}**"
       },
       "add_binary_sensor": {
         "title": "Variables+History - Binary Sensor",
@@ -43,6 +43,10 @@
         },
         "description": "Create a new Binary Sensor Variable\nSee [Configuration Options]({component_config_url}) on GitHub for details"
       }
+    },
+    "error": {
+      "invalid_value_type": "The value entered is not compatible with the selected device_class: {device_class}. Expected {value_type}.",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   },
   "options": {

@@ -43,6 +43,10 @@
         },
         "description": "Create a new Binary Sensor Variable"
       }
+    },
+    "error": {
+      "invalid_value_type": "The value entered is not compatible with the selected device_class",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   },
   "options": {

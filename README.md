@@ -9,6 +9,9 @@ A Home Assistant Integration to declare and set/update variables.
 
 Forked and updated from initial integration developed by [rogro82](https://github.com/rogro82)
 
+## Upgrading from v2 to v3
+**Existing variables will remain as yaml variables but instead of starting with `variable.`, they will now start with `sensor.` If you would like to manage the variable using the UI configuration, you will need to delete the entity from your yaml and recreate it in the UI.**
+
 ## Installation
 
 ### HACS *(recommended)*

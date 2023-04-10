@@ -1,8 +1,17 @@
+import copy
 import logging
 
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ICON, CONF_NAME, STATE_OFF, STATE_ON, Platform
+from homeassistant.const import (
+    ATTR_FRIENDLY_NAME,
+    ATTR_ICON,
+    CONF_ICON,
+    CONF_NAME,
+    STATE_OFF,
+    STATE_ON,
+    Platform,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity import generate_entity_id
@@ -45,6 +54,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 SERVICE_UPDATE_VARIABLE = "update_" + PLATFORM
+
+VARIABLE_ATTR_SETTINGS = {ATTR_FRIENDLY_NAME: "_attr_name", ATTR_ICON: "_attr_icon"}
 
 
 async def async_setup_entry(
@@ -114,10 +125,13 @@ class Variable(BinarySensorEntity, RestoreEntity):
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
         self._attr_is_on = bool_val
-        self._attr_extra_state_attributes = config.get(CONF_ATTRIBUTES)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
+        if config.get(CONF_ATTRIBUTES) is not None and config.get(CONF_ATTRIBUTES):
+            self._attr_extra_state_attributes = self._update_attr_settings(
+                config.get(CONF_ATTRIBUTES)
+            )
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
@@ -130,7 +144,9 @@ class Variable(BinarySensorEntity, RestoreEntity):
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
-                self._attr_extra_state_attributes = state.attributes
+                self._attr_extra_state_attributes = self._update_attr_settings(
+                    state.attributes.copy()
+                )
                 if state.state == STATE_OFF:
                     self._attr_is_on = False
                 elif state.state == STATE_ON:
@@ -148,6 +164,19 @@ class Variable(BinarySensorEntity, RestoreEntity):
         """Force update status of the entity."""
         return self._force_update
 
+    def _update_attr_settings(self, new_attributes=None):
+        if new_attributes is not None:
+            attributes = copy.deepcopy(new_attributes)
+            for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
+                if attrib in attributes.keys():
+                    _LOGGER.debug(
+                        f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
+                    )
+                    setattr(self, setting, attributes.pop(attrib, None))
+            return copy.deepcopy(attributes)
+        else:
+            return None
+
     async def async_update_variable(
         self,
         value=None,
@@ -160,29 +189,38 @@ class Variable(BinarySensorEntity, RestoreEntity):
         # _LOGGER.debug(f"value: {value}")
         # _LOGGER.debug(f"attributes: {attributes}")
         updated_attributes = None
-        updated_value = None
+
+        _LOGGER.debug(
+            f"({self._attr_name}) [async_update_variable] Replace Attributes: {replace_attributes}"
+        )
 
         if (
             not replace_attributes
             and hasattr(self, "_attr_extra_state_attributes")
             and self._attr_extra_state_attributes is not None
         ):
-            updated_attributes = dict(self._attr_extra_state_attributes)
+            updated_attributes = copy.deepcopy(self._attr_extra_state_attributes)
 
         if attributes is not None:
+            _LOGGER.debug(
+                f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
+            )
+            extra_attributes = self._update_attr_settings(attributes)
             if updated_attributes is not None:
-                updated_attributes.update(attributes)
+                updated_attributes.update(extra_attributes)
             else:
-                updated_attributes = attributes
+                updated_attributes = extra_attributes
 
-        if value is not None:
-            updated_value = value
+        self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
 
-        self._attr_extra_state_attributes = updated_attributes
+        if updated_attributes is not None:
+            _LOGGER.debug(
+                f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
+            )
 
-        if updated_value is None:
+        if value is None:
             self._attr_is_on = False
         else:
-            self._attr_is_on = updated_value
+            self._attr_is_on = value
 
         await self.async_update_ha_state()

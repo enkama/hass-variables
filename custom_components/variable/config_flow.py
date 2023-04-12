@@ -14,11 +14,13 @@ import voluptuous as vol
 from .const import (
     CONF_ATTRIBUTES,
     CONF_ENTITY_PLATFORM,
+    CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
     CONF_VALUE,
     CONF_VARIABLE_ID,
     CONF_YAML_VARIABLE,
+    DEFAULT_EXCLUDE_FROM_RECORDER,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_ICON,
     DEFAULT_RESTORE,
@@ -51,6 +53,9 @@ ADD_SENSOR_SCHEMA = vol.Schema(
         vol.Optional(
             CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
         ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+        vol.Optional(
+            CONF_EXCLUDE_FROM_RECORDER, default=DEFAULT_EXCLUDE_FROM_RECORDER
+        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
     }
 )
 
@@ -78,6 +83,9 @@ ADD_BINARY_SENSOR_SCHEMA = vol.Schema(
         ),
         vol.Optional(
             CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
+        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+        vol.Optional(
+            CONF_EXCLUDE_FROM_RECORDER, default=DEFAULT_EXCLUDE_FROM_RECORDER
         ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
     }
 )
@@ -251,6 +259,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                         CONF_FORCE_UPDATE, DEFAULT_FORCE_UPDATE
                     ),
                 ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                vol.Optional(
+                    CONF_EXCLUDE_FROM_RECORDER,
+                    default=self.config_entry.data.get(
+                        CONF_EXCLUDE_FROM_RECORDER, DEFAULT_EXCLUDE_FROM_RECORDER
+                    ),
+                ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
             }
         )
 
@@ -307,6 +321,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     CONF_FORCE_UPDATE,
                     default=self.config_entry.data.get(
                         CONF_FORCE_UPDATE, DEFAULT_FORCE_UPDATE
+                    ),
+                ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                vol.Optional(
+                    CONF_EXCLUDE_FROM_RECORDER,
+                    default=self.config_entry.data.get(
+                        CONF_EXCLUDE_FROM_RECORDER, DEFAULT_EXCLUDE_FROM_RECORDER
                     ),
                 ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
             }

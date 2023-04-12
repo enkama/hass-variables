@@ -16,7 +16,8 @@
           "value": "Initial Value",
           "attributes": "Initial Attributes",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Create a new Sensor Variable"
       },
@@ -29,7 +30,8 @@
           "value": "Initial Value",
           "attributes": "Initial Attributes",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Create a new Binary Sensor Variable"
       }
@@ -44,7 +46,8 @@
           "value": "Value (typically only useful if Restore on Restart is False)",
           "attributes": "Attributes (typically only useful if Restore on Restart is False)",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Update existing Variable Sensor"
       },
@@ -54,7 +57,8 @@
           "value": "Value (typically only useful if Restore on Restart is False)",
           "attributes": "Attributes (typically only useful if Restore on Restart is False)",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Update existing Variable Binary Sensor"
       }

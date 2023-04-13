@@ -23,33 +23,33 @@ def value_to_type(init_str, value_type):
             return None
         else:
             try:
-                valdate = datetime.date.fromisoformat(init_str)
+                value_date = datetime.date.fromisoformat(init_str)
             except ValueError:
                 raise ValueError(f"Cannot convert string to {value_type}: {init_str}")
                 return None
             else:
-                _LOGGER.debug(f"[value_to_type] date value: |{valdate}|")
-                return valdate
+                _LOGGER.debug(f"[value_to_type] date value: |{value_date}|")
+                return value_date
 
     elif value_type == "datetime":
         if init_str is None:
             return None
         else:
             try:
-                valdatetime = datetime.datetime.fromisoformat(init_str)
+                value_datetime = datetime.datetime.fromisoformat(init_str)
             except ValueError:
                 raise ValueError(f"Cannot convert string to {value_type}: {init_str}")
                 return None
             else:
-                _LOGGER.debug(f"[value_to_type] datetime value: |{valdatetime}|")
-                return valdatetime
+                _LOGGER.debug(f"[value_to_type] datetime value: |{value_datetime}|")
+                return value_datetime
 
     elif value_type == "number":
         if init_str is None:
             return None
-        elif (valnum := to_num(init_str)) is not None:
-            _LOGGER.debug(f"[value_to_type] number value: |{valnum}|")
-            return valnum
+        elif (value_num := to_num(init_str)) is not None:
+            _LOGGER.debug(f"[value_to_type] number value: |{value_num}|")
+            return value_num
         else:
             raise ValueError(f"Cannot convert string to {value_type}: {init_str}")
     elif value_type == "string":

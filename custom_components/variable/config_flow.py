@@ -175,7 +175,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             },
         )
 
-
     async def async_step_sensor_page_2(self, user_input=None):
         errors = {}
         if user_input is not None:

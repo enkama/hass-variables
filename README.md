@@ -9,6 +9,9 @@ A Home Assistant Integration to declare and set/update variables.
 
 Forked and updated from initial integration developed by [rogro82](https://github.com/rogro82)
 
+## Upgrading from v2 to v3
+**Existing variables will remain as yaml variables but instead of starting with `variable.`, they will now start with `sensor.` If you would like to manage the variable using the UI configuration, you will need to delete the entity from your yaml and recreate it in the UI.**
+
 ## Installation
 
 ### HACS *(recommended)*
@@ -35,8 +38,7 @@ You probably **do not** want to do this! Use the HACS method above unless you kn
 1. See [Configuration](#configuration) below
 </details>
 
-## Configuration
-**Configuration is done in the Integrations section of Home Assistant. Configuration with configuration.yaml is no longer supported.**
+## Preferred Configuration
 1. [Click Here](https://my.home-assistant.io/redirect/config_flow_start/?domain=variable) to directly add a `Variables+History` sensor **or**<br/>
   a. In Home Assistant, go to Settings -> [Integrations](https://my.home-assistant.io/redirect/integrations/)<br/>
   b. Click `+ Add Integrations` and select `Variables+History`<br/>
@@ -76,6 +78,55 @@ Name | Required | Default | Description |
 `Initial Attributes` | `No` | | Initial attributes of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
 `Restore on Restart` | `No` | `True` | If `True` will restore previous value on restart. If `False`, will reset to `Initial Value` and `Initial Attributes` on restart
 `Force Update` | `No` | `False` | Variable's `last_updated` time will change with any service calls to update the variable even if the value does not change
+
+</details>
+
+<details>
+<summary><h2>Alternate YAML Configuration</h2></summary>
+
+**Variables created via YAML will all start with `sensor.` and cannot be edited in the UI.**
+
+_You can have a combination of Variables created via the UI and via YAML._
+
+Add the component `variable` to your configuration and declare the variables you want.
+
+Name | yaml | Required | Default | Description |
+-- | -- | -- | -- | --
+Variable ID | `<key>:` | `Yes` | | The desired id of the new sensor (ex. `test_variable` would create an entity_id of `sensor.test_variable`)
+Name | `name` | `No` | | Friendly name of the variable sensor  
+Initial Value | `value` | `No` | | Initial value/state of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
+Initial Attributes | `attributes` | `No` | | Initial attributes of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
+Restore on Restart | `restore` | `No` | `True` | If `True` will restore previous value on restart. If `False`, will reset to `Initial Value` and `Initial Attributes` on restart
+Force Update | `force_update` | `No` | `False` | Variable's `last_updated` time will change with any service calls to update the variable even if the value does not change
+
+#### Example:
+
+```yaml
+variable:
+  countdown_timer:
+    value: 30
+    attributes:
+      friendly_name: 'Countdown'
+      icon: mdi:alarm
+  countdown_trigger:
+    name: Countdown
+    value: False
+  light_scene:
+    value: 'normal'
+    attributes:
+      previous: ''
+    restore: true
+  current_power_usage:
+    force_update: true
+
+  daily_download:
+    value: 0
+    restore: true
+    attributes:
+      state_class: measurement
+      unit_of_measurement: GB
+      icon: mdi:download
+```
 
 </details>
 
@@ -210,8 +261,10 @@ automation:
           entity_id: automation.test_timer_countdown
 ```
 
+## Examples
+
 <details>
-<summary><h4>Play and Save TTS Messages + Message History - Made by <a href="https://github.com/jazzyisj">jazzyisj</a></h4></summary>
+<summary><h3>Play and Save TTS Messages + Message History - Made by <a href="https://github.com/jazzyisj">jazzyisj</a></h3></summary>
 
 #### https://github.com/jazzyisj/save-tts-messages
 

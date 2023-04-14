@@ -1,6 +1,7 @@
 import copy
 import logging
 
+from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
 from homeassistant.components.sensor import (
     CONF_STATE_CLASS,
     PLATFORM_SCHEMA,
@@ -8,18 +9,12 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    ATTR_FRIENDLY_NAME,
+    ATTR_ICON,
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
-from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
-from homeassistant.components.sensor import PLATFORM_SCHEMA, RestoreSensor
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (
-    ATTR_FRIENDLY_NAME,
-    ATTR_ICON,
-    CONF_ICON,
-    CONF_NAME,
     Platform,
 )
 from homeassistant.core import HomeAssistant

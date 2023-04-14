@@ -5,9 +5,9 @@ from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensor
 from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    CONF_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
+    CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
     STATE_OFF,

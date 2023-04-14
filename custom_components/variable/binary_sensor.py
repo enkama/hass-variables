@@ -5,6 +5,7 @@ from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensor
 from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
+    CONF_DEVICE_CLASS,
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
     CONF_ICON,
@@ -131,6 +132,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
         self._attr_is_on = bool_val
+        self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)

@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from homeassistant.components.sensor import (
@@ -11,6 +12,14 @@ from homeassistant.const import (
     CONF_ICON,
     CONF_NAME,
     CONF_UNIT_OF_MEASUREMENT,
+from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
+from homeassistant.components.sensor import PLATFORM_SCHEMA, RestoreSensor
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import (
+    ATTR_FRIENDLY_NAME,
+    ATTR_ICON,
+    CONF_ICON,
+    CONF_NAME,
     Platform,
 )
 from homeassistant.core import HomeAssistant
@@ -24,12 +33,14 @@ from .const import (
     ATTR_REPLACE_ATTRIBUTES,
     ATTR_VALUE,
     CONF_ATTRIBUTES,
+    CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
     CONF_VALUE,
     CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
     CONF_YAML_VARIABLE,
+    DEFAULT_EXCLUDE_FROM_RECORDER,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_ICON,
     DEFAULT_REPLACE_ATTRIBUTES,
@@ -52,10 +63,15 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_ATTRIBUTES): dict,
         vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): cv.boolean,
         vol.Optional(CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE): cv.boolean,
+        vol.Optional(
+            CONF_EXCLUDE_FROM_RECORDER, default=DEFAULT_EXCLUDE_FROM_RECORDER
+        ): cv.boolean,
     }
 )
 
 SERVICE_UPDATE_VARIABLE = "update_" + PLATFORM
+
+VARIABLE_ATTR_SETTINGS = {ATTR_FRIENDLY_NAME: "_attr_name", ATTR_ICON: "_attr_icon"}
 
 
 async def async_setup_entry(
@@ -119,8 +135,6 @@ class Variable(RestoreSensor):
         self._attr_icon = config.get(CONF_ICON)
         if config.get(CONF_VALUE) is not None:
             self._attr_native_value = config.get(CONF_VALUE)
-        if config.get(CONF_ATTRIBUTES) is not None and config.get(CONF_ATTRIBUTES):
-            self._attr_extra_state_attributes = config.get(CONF_ATTRIBUTES)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._value_type = config.get(CONF_VALUE_TYPE)
@@ -128,9 +142,29 @@ class Variable(RestoreSensor):
         self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
         self._attr_state_class = config.get(CONF_STATE_CLASS)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
+        if config.get(CONF_ATTRIBUTES) is not None and config.get(CONF_ATTRIBUTES):
+            self._attr_extra_state_attributes = self._update_attr_settings(
+                config.get(CONF_ATTRIBUTES)
+            )
+        self._exclude_from_recorder = config.get(CONF_EXCLUDE_FROM_RECORDER)
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
+        if self._exclude_from_recorder:
+            self.disable_recorder()
+
+    def disable_recorder(self):
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            _LOGGER.info(
+                f"({self.get_attr(CONF_NAME)}) [disable_recorder] Extended Attributes is True, Disabling Recorder"
+            )
+            if self.entity_id:
+                ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
+
+            _LOGGER.debug(
+                f"({self.get_attr(CONF_NAME)}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
+            )
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -149,7 +183,9 @@ class Variable(RestoreSensor):
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
-                self._attr_extra_state_attributes = state.attributes
+                self._attr_extra_state_attributes = self._update_attr_settings(
+                    state.attributes.copy()
+                )
 
                 # Unsure how to deal with state vs native_value on restore.
                 # Setting Restored state to override native_value for now.
@@ -171,6 +207,16 @@ class Variable(RestoreSensor):
                         )
                         self._attr_native_value = newval
 
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            if self.entity_id:
+                _LOGGER.debug(
+                    f"({self.get_attr(CONF_NAME)}) Removing entity exclusion from recorder: {self.entity_id}"
+                )
+                ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
+
     @property
     def should_poll(self):
         """If entity should be polled."""
@@ -181,6 +227,19 @@ class Variable(RestoreSensor):
         """Force update status of the entity."""
         return self._force_update
 
+    def _update_attr_settings(self, new_attributes=None):
+        if new_attributes is not None:
+            attributes = copy.deepcopy(new_attributes)
+            for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
+                if attrib in attributes.keys():
+                    _LOGGER.debug(
+                        f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
+                    )
+                    setattr(self, setting, attributes.pop(attrib, None))
+            return copy.deepcopy(attributes)
+        else:
+            return None
+
     async def async_update_variable(
         self,
         value=None,
@@ -190,34 +249,45 @@ class Variable(RestoreSensor):
         """Update Sensor Variable."""
 
         updated_attributes = None
-        updated_value = None
+
+        _LOGGER.debug(
+            f"({self._attr_name}) [async_update_variable] Replace Attributes: {replace_attributes}"
+        )
 
         if (
             not replace_attributes
             and hasattr(self, "_attr_extra_state_attributes")
             and self._attr_extra_state_attributes is not None
         ):
-            updated_attributes = dict(self._attr_extra_state_attributes)
+            updated_attributes = copy.deepcopy(self._attr_extra_state_attributes)
 
         if attributes is not None:
+            _LOGGER.debug(
+                f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
+            )
+            extra_attributes = self._update_attr_settings(attributes)
             if updated_attributes is not None:
-                updated_attributes.update(attributes)
+                updated_attributes.update(extra_attributes)
             else:
-                updated_attributes = attributes
+                updated_attributes = extra_attributes
+
+        self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
+
+        if updated_attributes is not None:
+            _LOGGER.debug(
+                f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
+            )
 
         if value is not None:
-            updated_value = value
-
-        self._attr_extra_state_attributes = updated_attributes
-
-        if updated_value is not None:
             try:
-                newval = value_to_type(updated_value, self._value_type)
+                newval = value_to_type(value, self._value_type)
             except ValueError:
-                ERROR = f"The value entered is not compatible with the selected device_class: {self._attr_device_class}. Expected {self._value_type}."
+                ERROR = f"The value entered is not compatible with the selected device_class: {self._attr_device_class}. Expected: {self._value_type}. Value: {value}"
                 _LOGGER.error(ERROR)
                 raise ValueError(ERROR)
             else:
                 self._attr_native_value = newval
 
         await self.async_update_ha_state()
+        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] self: {self}")
+        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] name: {self.name}")

@@ -9,6 +9,7 @@ DEFAULT_FORCE_UPDATE = False
 DEFAULT_ICON = "mdi:variable"
 DEFAULT_REPLACE_ATTRIBUTES = False
 DEFAULT_RESTORE = True
+DEFAULT_EXCLUDE_FROM_RECORDER = False
 
 CONF_ATTRIBUTES = "attributes"
 CONF_ENTITY_PLATFORM = "entity_platform"
@@ -18,6 +19,7 @@ CONF_VALUE = "value"
 CONF_VALUE_TYPE = "value_type"
 CONF_VARIABLE_ID = "variable_id"
 CONF_YAML_VARIABLE = "yaml_variable"
+CONF_EXCLUDE_FROM_RECORDER = "exclude_from_recorder"
 
 ATTR_ATTRIBUTES = "attributes"
 ATTR_ENTITY = "entity"

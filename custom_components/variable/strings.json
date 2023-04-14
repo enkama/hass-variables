@@ -15,7 +15,8 @@
           "icon": "Icon",
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Create a new Sensor Variable"
       },
@@ -39,7 +40,8 @@
           "attributes": "Initial Attributes",
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Create a new Binary Sensor Variable"
       }
@@ -57,7 +59,8 @@
         "data": {
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Update existing Variable Sensor"
       },
@@ -78,7 +81,8 @@
           "attributes": "Attributes (typically only useful if Restore on Restart is False)",
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Update existing Variable Binary Sensor"
       }

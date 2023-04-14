@@ -1,6 +1,7 @@
 {
     "domain": "variable",
     "name": "Variables+History",
+    "after_dependencies": ["recorder"],
     "codeowners": [
         "@rogro82",
         "@wibias",

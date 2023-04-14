@@ -15,7 +15,8 @@
           "icon": "Icon",
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Create a new Sensor Variable\nSee [Configuration Options]({component_config_url}) on GitHub for details"
       },
@@ -39,7 +40,8 @@
           "attributes": "Initial Attributes",
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Create a new Binary Sensor Variable\nSee [Configuration Options]({component_config_url}) on GitHub for details"
       }
@@ -57,7 +59,8 @@
         "data": {
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "**Updating Sensor:&nbsp;{disp_name}**\nSee [Configuration Options]({component_config_url}) on GitHub for details"
       },
@@ -78,7 +81,8 @@
           "attributes": "Attributes (typically only useful if Restore on Restart is False)",
           "device_class": "Device Class",
           "restore": "Restore on Restart",
-          "force_update": "Force Update"
+          "force_update": "Force Update",
+          "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "**Updating Binary Sensor:&nbsp;{disp_name}**\nSee [Configuration Options]({component_config_url}) on GitHub for details"
       }

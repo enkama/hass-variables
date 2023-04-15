@@ -1,6 +1,7 @@
 import copy
 import logging
 
+from homeassistant.components import persistent_notification
 from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
 from homeassistant.components.sensor import (
     CONF_STATE_CLASS,
@@ -41,6 +42,7 @@ from .const import (
     DEFAULT_REPLACE_ATTRIBUTES,
     DEFAULT_RESTORE,
     DOMAIN,
+    PLAFORM_NAME,
 )
 from .helpers import value_to_type
 
@@ -276,11 +278,20 @@ class Variable(RestoreSensor):
                 newval = value_to_type(value, self._value_type)
             except ValueError:
                 ERROR = f"The value entered is not compatible with the selected device_class: {self._attr_device_class}. Expected: {self._value_type}. Value: {value}"
-                _LOGGER.error(ERROR)
-                raise ValueError(ERROR)
+                persistent_notification.async_create(
+                    hass=self._hass,
+                    message=ERROR,
+                    title=f"{PLAFORM_NAME} - {self._attr_name}",
+                    notification_id=self._variable_id,
+                )
+                _LOGGER.warning(f"({self._attr_name}) {ERROR}")
+                # raise ValueError(ERROR)
             else:
                 self._attr_native_value = newval
-
-        await self.async_update_ha_state()
-        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] self: {self}")
-        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] name: {self.name}")
+                await self.async_update_ha_state()
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_update_variable] self: {self}"
+                )
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_update_variable] name: {self.name}"
+                )

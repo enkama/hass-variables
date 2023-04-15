@@ -151,14 +151,12 @@ class Variable(RestoreSensor):
     def disable_recorder(self):
         if RECORDER_INSTANCE in self._hass.data:
             ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
-            _LOGGER.info(
-                f"({self.get_attr(CONF_NAME)}) [disable_recorder] Extended Attributes is True, Disabling Recorder"
-            )
+            _LOGGER.info(f"({self._attr_name}) [disable_recorder] Disabling Recorder")
             if self.entity_id:
                 ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
 
             _LOGGER.debug(
-                f"({self.get_attr(CONF_NAME)}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
+                f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
             )
 
     async def async_added_to_hass(self):
@@ -208,7 +206,7 @@ class Variable(RestoreSensor):
             ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
             if self.entity_id:
                 _LOGGER.debug(
-                    f"({self.get_attr(CONF_NAME)}) Removing entity exclusion from recorder: {self.entity_id}"
+                    f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
                 )
                 ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
 

@@ -1,5 +1,6 @@
 from homeassistant.const import Platform
 
+PLAFORM_NAME = "Variables+History"
 DOMAIN = "variable"
 
 PLATFORMS: list[str] = [Platform.SENSOR, Platform.BINARY_SENSOR]

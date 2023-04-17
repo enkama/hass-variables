@@ -133,6 +133,55 @@ variable:
 
 </details>
 
+<details>
+<summary><h2>Alternate YAML Configuration</h2></summary>
+
+**Variables created via YAML will all start with `sensor.` and cannot be edited in the UI.**
+
+_You can have a combination of Variables created via the UI and via YAML._
+
+Add the component `variable` to your configuration and declare the variables you want.
+
+Name | yaml | Required | Default | Description |
+-- | -- | -- | -- | --
+Variable ID | `<key>:` | `Yes` | | The desired id of the new sensor (ex. `test_variable` would create an entity_id of `sensor.test_variable`)
+Name | `name` | `No` | | Friendly name of the variable sensor  
+Initial Value | `value` | `No` | | Initial value/state of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
+Initial Attributes | `attributes` | `No` | | Initial attributes of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
+Restore on Restart | `restore` | `No` | `True` | If `True` will restore previous value on restart. If `False`, will reset to `Initial Value` and `Initial Attributes` on restart
+Force Update | `force_update` | `No` | `False` | Variable's `last_updated` time will change with any service calls to update the variable even if the value does not change
+
+#### Example:
+
+```yaml
+variable:
+  countdown_timer:
+    value: 30
+    attributes:
+      friendly_name: 'Countdown'
+      icon: mdi:alarm
+  countdown_trigger:
+    name: Countdown
+    value: False
+  light_scene:
+    value: 'normal'
+    attributes:
+      previous: ''
+    restore: true
+  current_power_usage:
+    force_update: true
+
+  daily_download:
+    value: 0
+    restore: true
+    attributes:
+      state_class: measurement
+      unit_of_measurement: GB
+      icon: mdi:download
+```
+
+</details>
+
 ## Services
 
 There are instructions and selectors when the service is called from the Developer Tools or within a Script or Automation.

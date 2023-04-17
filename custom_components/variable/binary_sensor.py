@@ -2,10 +2,12 @@ import copy
 import logging
 
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
+from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
+    CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
     STATE_OFF,
@@ -24,11 +26,13 @@ from .const import (
     ATTR_REPLACE_ATTRIBUTES,
     ATTR_VALUE,
     CONF_ATTRIBUTES,
+    CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
     CONF_VALUE,
     CONF_VARIABLE_ID,
     CONF_YAML_VARIABLE,
+    DEFAULT_EXCLUDE_FROM_RECORDER,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_ICON,
     DEFAULT_REPLACE_ATTRIBUTES,
@@ -50,6 +54,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_ATTRIBUTES): dict,
         vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): cv.boolean,
         vol.Optional(CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE): cv.boolean,
+        vol.Optional(
+            CONF_EXCLUDE_FROM_RECORDER, default=DEFAULT_EXCLUDE_FROM_RECORDER
+        ): cv.boolean,
     }
 )
 
@@ -125,6 +132,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
         self._attr_is_on = bool_val
+        self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
@@ -132,9 +140,23 @@ class Variable(BinarySensorEntity, RestoreEntity):
             self._attr_extra_state_attributes = self._update_attr_settings(
                 config.get(CONF_ATTRIBUTES)
             )
+        self._exclude_from_recorder = config.get(CONF_EXCLUDE_FROM_RECORDER)
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
+        if self._exclude_from_recorder:
+            self.disable_recorder()
+
+    def disable_recorder(self):
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            _LOGGER.info(f"({self._attr_name}) [disable_recorder] Disabling Recorder")
+            if self.entity_id:
+                ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
+
+            _LOGGER.debug(
+                f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
+            )
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -153,6 +175,16 @@ class Variable(BinarySensorEntity, RestoreEntity):
                     self._attr_is_on = True
                 else:
                     self._attr_is_on = state.state
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            if self.entity_id:
+                _LOGGER.debug(
+                    f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+                )
+                ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
 
     @property
     def should_poll(self):

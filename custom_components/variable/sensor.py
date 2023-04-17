@@ -1,13 +1,21 @@
 import copy
 import logging
 
-from homeassistant.components.sensor import PLATFORM_SCHEMA, RestoreSensor
+from homeassistant.components import persistent_notification
+from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
+from homeassistant.components.sensor import (
+    CONF_STATE_CLASS,
+    PLATFORM_SCHEMA,
+    RestoreSensor,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
+    CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
+    CONF_UNIT_OF_MEASUREMENT,
     Platform,
 )
 from homeassistant.core import HomeAssistant
@@ -21,17 +29,22 @@ from .const import (
     ATTR_REPLACE_ATTRIBUTES,
     ATTR_VALUE,
     CONF_ATTRIBUTES,
+    CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
     CONF_VALUE,
+    CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
     CONF_YAML_VARIABLE,
+    DEFAULT_EXCLUDE_FROM_RECORDER,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_ICON,
     DEFAULT_REPLACE_ATTRIBUTES,
     DEFAULT_RESTORE,
     DOMAIN,
+    PLAFORM_NAME,
 )
+from .helpers import value_to_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +60,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_ATTRIBUTES): dict,
         vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): cv.boolean,
         vol.Optional(CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE): cv.boolean,
+        vol.Optional(
+            CONF_EXCLUDE_FROM_RECORDER, default=DEFAULT_EXCLUDE_FROM_RECORDER
+        ): cv.boolean,
     }
 )
 
@@ -118,14 +134,32 @@ class Variable(RestoreSensor):
             self._attr_native_value = config.get(CONF_VALUE)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
+        self._value_type = config.get(CONF_VALUE_TYPE)
+        self._attr_device_class = config.get(CONF_DEVICE_CLASS)
+        self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
+        self._attr_state_class = config.get(CONF_STATE_CLASS)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
         if config.get(CONF_ATTRIBUTES) is not None and config.get(CONF_ATTRIBUTES):
             self._attr_extra_state_attributes = self._update_attr_settings(
                 config.get(CONF_ATTRIBUTES)
             )
+        self._exclude_from_recorder = config.get(CONF_EXCLUDE_FROM_RECORDER)
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
+        if self._exclude_from_recorder:
+            self.disable_recorder()
+
+    def disable_recorder(self):
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            _LOGGER.info(f"({self._attr_name}) [disable_recorder] Disabling Recorder")
+            if self.entity_id:
+                ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
+
+            _LOGGER.debug(
+                f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
+            )
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -138,6 +172,9 @@ class Variable(RestoreSensor):
                     f"({self._attr_name}) Restored sensor: {sensor.as_dict()}"
                 )
                 self._attr_native_value = sensor.native_value
+                # self._attr_native_unit_of_measurement = (
+                #    sensor.native_unit_of_measurement
+                # )
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
@@ -149,16 +186,41 @@ class Variable(RestoreSensor):
                 # Setting Restored state to override native_value for now.
                 # self._state = state.state
                 if sensor is None or (
-                    sensor
-                    and state.state is not None
-                    and state.state.lower() != "none"
-                    and sensor.native_value != state.state
+                    sensor and state.state is not None and state.state.lower() != "none"
                 ):
-                    _LOGGER.info(
-                        f"({self._attr_name}) Restored values are different. "
-                        f"native_value: {sensor.native_value} | state: {state.state}"
-                    )
-                    self._attr_native_value = state.state
+
+                    try:
+                        newval = value_to_type(state.state, self._value_type)
+                    except ValueError:
+                        newval = state.state
+
+                    _LOGGER.debug(f"({self._attr_name}) Updated state: |{newval}|")
+                    if sensor.native_value != newval:
+                        _LOGGER.info(
+                            f"({self._attr_name}) Restored values are different. "
+                            f"native_value: {sensor.native_value} | state: {newval}"
+                        )
+                        self._attr_native_value = newval
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            if self.entity_id:
+                _LOGGER.debug(
+                    f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+                )
+                ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            if self.entity_id:
+                _LOGGER.debug(
+                    f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+                )
+                ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
 
     @property
     def should_poll(self):
@@ -218,11 +280,24 @@ class Variable(RestoreSensor):
             )
 
         if value is not None:
-            _LOGGER.debug(
-                f"({self._attr_name}) [async_update_variable] New Value: {value}"
-            )
-            self._attr_native_value = value
-
-        await self.async_update_ha_state()
-        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] self: {self}")
-        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] name: {self.name}")
+            try:
+                newval = value_to_type(value, self._value_type)
+            except ValueError:
+                ERROR = f"The value entered is not compatible with the selected device_class: {self._attr_device_class}. Expected: {self._value_type}. Value: {value}"
+                persistent_notification.async_create(
+                    hass=self._hass,
+                    message=ERROR,
+                    title=f"{PLAFORM_NAME} - {self._attr_name}",
+                    notification_id=self._variable_id,
+                )
+                _LOGGER.warning(f"({self._attr_name}) {ERROR}")
+                # raise ValueError(ERROR)
+            else:
+                self._attr_native_value = newval
+                await self.async_update_ha_state()
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_update_variable] self: {self}"
+                )
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_update_variable] name: {self.name}"
+                )

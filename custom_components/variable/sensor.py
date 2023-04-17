@@ -212,6 +212,16 @@ class Variable(RestoreSensor):
                 )
                 ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
 
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        if RECORDER_INSTANCE in self._hass.data:
+            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
+            if self.entity_id:
+                _LOGGER.debug(
+                    f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+                )
+                ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
+
     @property
     def should_poll(self):
         """If entity should be polled."""

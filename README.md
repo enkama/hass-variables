@@ -63,6 +63,7 @@ Name | Required | Default | Description |
 `Initial Attributes` | `No` | | Initial attributes of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
 `Restore on Restart` | `No` | `True` | If `True` will restore previous value on restart. If `False`, will reset to `Initial Value` and `Initial Attributes` on restart
 `Force Update` | `No` | `False` | Variable's `last_updated` time will change with any service calls to update the variable even if the value does not change
+`Exclude from Recorder` | `No` | `False` | For Variables with large attributes (>16 kB), enable this to prevent Recorder Errors.
 
 </details>
 
@@ -78,6 +79,7 @@ Name | Required | Default | Description |
 `Initial Attributes` | `No` | | Initial attributes of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
 `Restore on Restart` | `No` | `True` | If `True` will restore previous value on restart. If `False`, will reset to `Initial Value` and `Initial Attributes` on restart
 `Force Update` | `No` | `False` | Variable's `last_updated` time will change with any service calls to update the variable even if the value does not change
+`Exclude from Recorder` | `No` | `False` | For Variables with large attributes (>16 kB), enable this to prevent Recorder Errors.
 
 </details>
 
@@ -98,6 +100,7 @@ Initial Value | `value` | `No` | | Initial value/state of the variable. If `Rest
 Initial Attributes | `attributes` | `No` | | Initial attributes of the variable. If `Restore on Restart` is `False`, the variable will reset to this value on every restart
 Restore on Restart | `restore` | `No` | `True` | If `True` will restore previous value on restart. If `False`, will reset to `Initial Value` and `Initial Attributes` on restart
 Force Update | `force_update` | `No` | `False` | Variable's `last_updated` time will change with any service calls to update the variable even if the value does not change
+Exclude from Recorder | `exclude_from_recorder` | `No` | `False` | For Variables with large attributes (>16 kB), set to `True` to prevent Recorder Errors.  
 
 #### Example:
 

@@ -1,3 +1,4 @@
+from collections.abc import MutableMapping
 import copy
 import logging
 
@@ -135,10 +136,16 @@ class Variable(BinarySensorEntity, RestoreEntity):
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
         self._exclude_from_recorder = config.get(CONF_EXCLUDE_FROM_RECORDER)
-        if config.get(CONF_ATTRIBUTES) is not None and config.get(CONF_ATTRIBUTES):
+        if (
+            config.get(CONF_ATTRIBUTES) is not None
+            and config.get(CONF_ATTRIBUTES)
+            and isinstance(config.get(CONF_ATTRIBUTES), MutableMapping)
+        ):
             self._attr_extra_state_attributes = self._update_attr_settings(
                 config.get(CONF_ATTRIBUTES)
             )
+        else:
+            self._attr_extra_state_attributes = None
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
@@ -164,15 +171,25 @@ class Variable(BinarySensorEntity, RestoreEntity):
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
-                self._attr_extra_state_attributes = self._update_attr_settings(
-                    state.attributes.copy()
-                )
-                if state.state == STATE_OFF:
-                    self._attr_is_on = False
-                elif state.state == STATE_ON:
-                    self._attr_is_on = True
+                if (
+                    hasattr(state, "attributes")
+                    and state.attributes
+                    and isinstance(state.attributes, MutableMapping)
+                ):
+                    self._attr_extra_state_attributes = self._update_attr_settings(
+                        state.attributes.copy()
+                    )
+                if hasattr(state, "state"):
+                    if state.state == STATE_OFF:
+                        self._attr_is_on = False
+                    elif state.state == STATE_ON:
+                        self._attr_is_on = True
+                    elif state.state is None:
+                        self._attr_is_on = False
+                    else:
+                        self._attr_is_on = state.state
                 else:
-                    self._attr_is_on = state.state
+                    self._attr_is_on = False
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
@@ -196,14 +213,20 @@ class Variable(BinarySensorEntity, RestoreEntity):
 
     def _update_attr_settings(self, new_attributes=None):
         if new_attributes is not None:
-            attributes = copy.deepcopy(new_attributes)
-            for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
-                if attrib in attributes.keys():
-                    _LOGGER.debug(
-                        f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
-                    )
-                    setattr(self, setting, attributes.pop(attrib, None))
-            return copy.deepcopy(attributes)
+            if isinstance(new_attributes, MutableMapping):
+                attributes = copy.deepcopy(new_attributes)
+                for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
+                    if attrib in attributes.keys():
+                        _LOGGER.debug(
+                            f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
+                        )
+                        setattr(self, setting, attributes.pop(attrib, None))
+                return copy.deepcopy(attributes)
+            else:
+                _LOGGER.error(
+                    f"({self._attr_name}) AttributeError: Attributes must be a dictionary: {new_attributes}"
+                )
+                return new_attributes
         else:
             return None
 
@@ -215,9 +238,6 @@ class Variable(BinarySensorEntity, RestoreEntity):
     ) -> None:
         """Update Binary Sensor Variable."""
 
-        # _LOGGER.debug("Starting async_update_variable")
-        # _LOGGER.debug(f"value: {value}")
-        # _LOGGER.debug(f"attributes: {attributes}")
         updated_attributes = None
 
         _LOGGER.debug(
@@ -232,21 +252,27 @@ class Variable(BinarySensorEntity, RestoreEntity):
             updated_attributes = copy.deepcopy(self._attr_extra_state_attributes)
 
         if attributes is not None:
-            _LOGGER.debug(
-                f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
-            )
-            extra_attributes = self._update_attr_settings(attributes)
-            if updated_attributes is not None:
-                updated_attributes.update(extra_attributes)
+            if isinstance(attributes, MutableMapping):
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
+                )
+                extra_attributes = self._update_attr_settings(attributes)
+                if updated_attributes is not None:
+                    updated_attributes.update(extra_attributes)
+                else:
+                    updated_attributes = extra_attributes
             else:
-                updated_attributes = extra_attributes
-
-        self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
+                _LOGGER.error(
+                    f"({self._attr_name}) AttributeError: Attributes must be a dictionary: {attributes}"
+                )
 
         if updated_attributes is not None:
+            self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )
+        else:
+            self._attr_extra_state_attributes = None
 
         if value is None:
             self._attr_is_on = False

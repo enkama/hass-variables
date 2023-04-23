@@ -1,3 +1,4 @@
+from collections.abc import MutableMapping
 import copy
 import logging
 
@@ -126,10 +127,16 @@ class Variable(RestoreSensor):
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
         self._exclude_from_recorder = config.get(CONF_EXCLUDE_FROM_RECORDER)
-        if config.get(CONF_ATTRIBUTES) is not None and config.get(CONF_ATTRIBUTES):
+        if (
+            config.get(CONF_ATTRIBUTES) is not None
+            and config.get(CONF_ATTRIBUTES)
+            and isinstance(config.get(CONF_ATTRIBUTES), MutableMapping)
+        ):
             self._attr_extra_state_attributes = self._update_attr_settings(
                 config.get(CONF_ATTRIBUTES)
             )
+        else:
+            self._attr_extra_state_attributes = None
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
@@ -153,7 +160,7 @@ class Variable(RestoreSensor):
         if self._restore is True:
             _LOGGER.info(f"({self._attr_name}) Restoring after Reboot")
             sensor = await self.async_get_last_sensor_data()
-            if sensor:
+            if sensor and hasattr(sensor, "native_value"):
                 _LOGGER.debug(
                     f"({self._attr_name}) Restored sensor: {sensor.as_dict()}"
                 )
@@ -161,17 +168,24 @@ class Variable(RestoreSensor):
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
-                self._attr_extra_state_attributes = self._update_attr_settings(
-                    state.attributes.copy()
-                )
+                if (
+                    hasattr(state, "attributes")
+                    and state.attributes
+                    and isinstance(state.attributes, MutableMapping)
+                ):
+                    self._attr_extra_state_attributes = self._update_attr_settings(
+                        state.attributes.copy()
+                    )
 
                 # Unsure how to deal with state vs native_value on restore.
                 # Setting Restored state to override native_value for now.
                 # self._state = state.state
-                if sensor is None or (
+                if (sensor is None and hasattr(state, "state")) or (
                     sensor
+                    and hasattr(state, "state")
                     and state.state is not None
                     and state.state.lower() != "none"
+                    and hasattr(sensor, "native_value")
                     and sensor.native_value != state.state
                 ):
                     _LOGGER.info(
@@ -202,14 +216,20 @@ class Variable(RestoreSensor):
 
     def _update_attr_settings(self, new_attributes=None):
         if new_attributes is not None:
-            attributes = copy.deepcopy(new_attributes)
-            for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
-                if attrib in attributes.keys():
-                    _LOGGER.debug(
-                        f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
-                    )
-                    setattr(self, setting, attributes.pop(attrib, None))
-            return copy.deepcopy(attributes)
+            if isinstance(new_attributes, MutableMapping):
+                attributes = copy.deepcopy(new_attributes)
+                for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
+                    if attrib in attributes.keys():
+                        _LOGGER.debug(
+                            f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
+                        )
+                        setattr(self, setting, attributes.pop(attrib, None))
+                return copy.deepcopy(attributes)
+            else:
+                _LOGGER.error(
+                    f"({self._attr_name}) AttributeError: Attributes must be a dictionary: {new_attributes}"
+                )
+                return new_attributes
         else:
             return None
 
@@ -235,21 +255,27 @@ class Variable(RestoreSensor):
             updated_attributes = copy.deepcopy(self._attr_extra_state_attributes)
 
         if attributes is not None:
-            _LOGGER.debug(
-                f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
-            )
-            extra_attributes = self._update_attr_settings(attributes)
-            if updated_attributes is not None:
-                updated_attributes.update(extra_attributes)
+            if isinstance(attributes, MutableMapping):
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
+                )
+                extra_attributes = self._update_attr_settings(attributes)
+                if updated_attributes is not None:
+                    updated_attributes.update(extra_attributes)
+                else:
+                    updated_attributes = extra_attributes
             else:
-                updated_attributes = extra_attributes
-
-        self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
+                _LOGGER.error(
+                    f"({self._attr_name}) AttributeError: Attributes must be a dictionary: {attributes}"
+                )
 
         if updated_attributes is not None:
+            self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )
+        else:
+            self._attr_extra_state_attributes = None
 
         if value is not None:
             _LOGGER.debug(

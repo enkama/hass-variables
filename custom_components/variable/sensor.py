@@ -283,6 +283,6 @@ class Variable(RestoreSensor):
             )
             self._attr_native_value = value
 
-        await self.async_update_ha_state()
+        self.async_write_ha_state()
         _LOGGER.debug(f"({self._attr_name}) [async_update_variable] self: {self}")
         _LOGGER.debug(f"({self._attr_name}) [async_update_variable] name: {self.name}")

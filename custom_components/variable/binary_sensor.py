@@ -279,4 +279,4 @@ class Variable(BinarySensorEntity, RestoreEntity):
         else:
             self._attr_is_on = value
 
-        await self.async_update_ha_state()
+        self.async_write_ha_state()

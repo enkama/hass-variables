@@ -157,11 +157,16 @@ class Variable(BinarySensorEntity, RestoreEntity):
             ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
             _LOGGER.info(f"({self._attr_name}) [disable_recorder] Disabling Recorder")
             if self.entity_id:
-                ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
-
-            _LOGGER.debug(
-                f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
-            )
+                try:
+                    ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
+                except AttributeError as e:
+                    _LOGGER.warning(
+                        f"({self._attr_name}) [disable_recorder] AttributeError trying to disable Recorder: {e}"
+                    )
+                else:
+                    _LOGGER.debug(
+                        f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
+                    )
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""

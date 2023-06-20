@@ -129,13 +129,6 @@ class Variable(RestoreSensor):
         else:
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
-        if config.get(CONF_VALUE) is None or (
-            isinstance(config.get(CONF_VALUE), str)
-            and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
-        ):
-            self._attr_native_value = None
-        else:
-            self._attr_native_value = config.get(CONF_VALUE)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
@@ -154,6 +147,18 @@ class Variable(RestoreSensor):
         self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
         self._attr_state_class = config.get(CONF_STATE_CLASS)
+        if config.get(CONF_VALUE) is None or (
+            isinstance(config.get(CONF_VALUE), str)
+            and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
+        ):
+            self._attr_native_value = None
+        else:
+            try:
+                self._attr_native_value = value_to_type(
+                    config.get(CONF_VALUE), self._value_type
+                )
+            except ValueError:
+                self._attr_native_value = None
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
@@ -199,7 +204,12 @@ class Variable(RestoreSensor):
                 ):
                     self._attr_native_value = None
                 else:
-                    self._attr_native_value = sensor.native_value
+                    try:
+                        self._attr_native_value = value_to_type(
+                            sensor.native_value, self._value_type
+                        )
+                    except ValueError:
+                        self._attr_native_value = None
                 # self._attr_native_unit_of_measurement = (
                 #    sensor.native_unit_of_measurement
                 # )
@@ -222,7 +232,6 @@ class Variable(RestoreSensor):
                     sensor
                     and hasattr(state, "state")
                     and state.state is not None
-                    and state.state.lower() != "none"
                     and hasattr(sensor, "native_value")
                     and sensor.native_value != state.state
                 ):
@@ -241,7 +250,7 @@ class Variable(RestoreSensor):
                         try:
                             newval = value_to_type(state.state, self._value_type)
                         except ValueError:
-                            newval = state.state
+                            newval = None
 
                     _LOGGER.debug(f"({self._attr_name}) Updated state: |{newval}|")
                     if sensor.native_value is None or (
@@ -256,7 +265,12 @@ class Variable(RestoreSensor):
                     ):
                         nat_val = None
                     else:
-                        nat_val = sensor.native_value
+                        try:
+                            nat_val = value_to_type(
+                                sensor.native_value, self._value_type
+                            )
+                        except ValueError:
+                            nat_val = None
                     if nat_val != newval:
                         _LOGGER.info(
                             f"({self._attr_name}) Restored values are different. "

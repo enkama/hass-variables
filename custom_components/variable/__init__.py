@@ -221,7 +221,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
                         entry, data=var_fields, options=entry.options
                     )
 
-                    await hass.config_entries.async_reload(entry_id)
+                    hass.config_entries.async_reload(entry_id)
 
                 else:
                     _LOGGER.error(

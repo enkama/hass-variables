@@ -126,11 +126,14 @@ class Variable(BinarySensorEntity, RestoreEntity):
             isinstance(config.get(CONF_VALUE), str)
             and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
         ):
-            bool_val = None
-        elif config.get(CONF_VALUE).lower() in ["true", "1", "t", "y", "yes", "on"]:
-            bool_val = True
+            self._attr_is_on = None
+        elif isinstance(config.get(CONF_VALUE), str):
+            if config.get(CONF_VALUE).lower() in ["true", "1", "t", "y", "yes", "on"]:
+                self._attr_is_on = True
+            else:
+                self._attr_is_on = False
         else:
-            bool_val = False
+            self._attr_is_on = config.get(CONF_VALUE)
         self._hass = hass
         self._config = config
         self._config_entry = config_entry
@@ -142,7 +145,6 @@ class Variable(BinarySensorEntity, RestoreEntity):
         else:
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
-        self._attr_is_on = bool_val
         self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)

@@ -129,13 +129,13 @@ class Variable(RestoreSensor):
         else:
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
-        if config.get(CONF_VALUE) is not None:
-            if isinstance(config.get(CONF_VALUE), str) and config.get(
-                CONF_VALUE
-            ).lower() in ["", "none", "unknown", "unavailable"]:
-                self._attr_native_value = None
-            else:
-                self._attr_native_value = config.get(CONF_VALUE)
+        if config.get(CONF_VALUE) is None or (
+            isinstance(config.get(CONF_VALUE), str)
+            and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
+        ):
+            self._attr_native_value = None
+        else:
+            self._attr_native_value = config.get(CONF_VALUE)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
@@ -187,14 +187,16 @@ class Variable(RestoreSensor):
                     f"({self._attr_name}) Restored sensor: {sensor.as_dict()}"
                 )
 
-                if isinstance(
-                    sensor.native_value, str
-                ) and sensor.native_value.lower() in [
-                    "",
-                    "none",
-                    "unknown",
-                    "unavailable",
-                ]:
+                if sensor.native_value is None or (
+                    isinstance(sensor.native_value, str)
+                    and sensor.native_value.lower()
+                    in [
+                        "",
+                        "none",
+                        "unknown",
+                        "unavailable",
+                    ]
+                ):
                     self._attr_native_value = None
                 else:
                     self._attr_native_value = sensor.native_value
@@ -224,12 +226,16 @@ class Variable(RestoreSensor):
                     and hasattr(sensor, "native_value")
                     and sensor.native_value != state.state
                 ):
-                    if isinstance(state.state, str) and state.state.lower() in [
-                        "",
-                        "none",
-                        "unknown",
-                        "unavailable",
-                    ]:
+                    if state.state is None or (
+                        isinstance(state.state, str)
+                        and state.state.lower()
+                        in [
+                            "",
+                            "none",
+                            "unknown",
+                            "unavailable",
+                        ]
+                    ):
                         newval = None
                     else:
                         try:
@@ -238,10 +244,16 @@ class Variable(RestoreSensor):
                             newval = state.state
 
                     _LOGGER.debug(f"({self._attr_name}) Updated state: |{newval}|")
-                    if sensor.native_value is None or sensor.native_value in [
-                        "unknown",
-                        "unavailable",
-                    ]:
+                    if sensor.native_value is None or (
+                        isinstance(sensor.native_value, str)
+                        and sensor.native_value.lower()
+                        in [
+                            "",
+                            "none",
+                            "unknown",
+                            "unavailable",
+                        ]
+                    ):
                         nat_val = None
                     else:
                         nat_val = sensor.native_value

@@ -122,11 +122,10 @@ class Variable(BinarySensorEntity, RestoreEntity):
         _LOGGER.debug(
             f"({config.get(CONF_NAME, config.get(CONF_VARIABLE_ID))}) [init] config: {config}"
         )
-        if config.get(CONF_VALUE) is None or config.get(CONF_VALUE) in [
-            "None",
-            "unknown",
-            "unavailable",
-        ]:
+        if config.get(CONF_VALUE) is None or (
+            isinstance(config.get(CONF_VALUE), str)
+            and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
+        ):
             bool_val = None
         elif config.get(CONF_VALUE).lower() in ["true", "1", "t", "y", "yes", "on"]:
             bool_val = True
@@ -196,10 +195,11 @@ class Variable(BinarySensorEntity, RestoreEntity):
                         state.attributes.copy()
                     )
                 if hasattr(state, "state"):
-                    if state.state is None or state.state in [
-                        "unknown",
-                        "unavailable",
-                    ]:
+                    if state.state is None or (
+                        isinstance(state.state, str)
+                        and state.state.lower()
+                        in ["", "none", "unknown", "unavailable"]
+                    ):
                         self._attr_is_on = None
                     elif state.state == STATE_OFF:
                         self._attr_is_on = False

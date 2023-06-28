@@ -18,6 +18,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform, selector
 from homeassistant.helpers.entity import generate_entity_id
+from homeassistant.helpers.entity_registry import async_get
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
 import voluptuous as vol
@@ -161,9 +162,18 @@ class Variable(BinarySensorEntity, RestoreEntity):
             )
         else:
             self._attr_extra_state_attributes = None
-        self.entity_id = generate_entity_id(
-            ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
+
+        registry = async_get(self._hass)
+        current_entity_id = registry.async_get_entity_id(
+            PLATFORM, DOMAIN, self._attr_unique_id
         )
+        if current_entity_id is not None:
+            self.entity_id = current_entity_id
+        else:
+            self.entity_id = generate_entity_id(
+                ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
+            )
+        _LOGGER.debug(f"({self._attr_name}) entity_id: {self.entity_id}")
         if self._exclude_from_recorder:
             self.disable_recorder()
 

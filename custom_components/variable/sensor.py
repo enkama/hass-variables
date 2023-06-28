@@ -44,6 +44,7 @@ from .const import (
     DOMAIN,
 )
 from .helpers import value_to_type
+from .recorder_history_prefilter import recorder_prefilter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -167,19 +168,8 @@ class Variable(RestoreSensor):
 
     def disable_recorder(self):
         if RECORDER_INSTANCE in self._hass.data:
-            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
             _LOGGER.info(f"({self._attr_name}) [disable_recorder] Disabling Recorder")
-            if self.entity_id:
-                try:
-                    ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
-                except AttributeError as e:
-                    _LOGGER.warning(
-                        f"({self._attr_name}) [disable_recorder] AttributeError trying to disable Recorder: {e}"
-                    )
-                else:
-                    _LOGGER.debug(
-                        f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
-                    )
+            recorder_prefilter.add_filter(self._hass, self.entity_id)
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -281,16 +271,10 @@ class Variable(RestoreSensor):
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         if RECORDER_INSTANCE in self._hass.data:
-            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
-            if self.entity_id:
-                try:
-                    ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
-                except AttributeError:
-                    pass
-                else:
-                    _LOGGER.debug(
-                        f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
-                    )
+            _LOGGER.debug(
+                f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+            )
+            recorder_prefilter.remove_filter(self._hass, self.entity_id)
 
     @property
     def should_poll(self):

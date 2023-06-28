@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
+    CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
     STATE_OFF,
@@ -15,7 +16,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import config_validation as cv, entity_platform
+from homeassistant.helpers import config_validation as cv, entity_platform, selector
 from homeassistant.helpers.entity import generate_entity_id
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
@@ -79,7 +80,15 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         SERVICE_UPDATE_VARIABLE,
         {
-            vol.Optional(ATTR_VALUE): cv.boolean,
+            vol.Optional(CONF_VALUE): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["None", "true", "false"],
+                    translation_key="boolean_options",
+                    multiple=False,
+                    custom_value=False,
+                    mode=selector.SelectSelectorMode.LIST,
+                )
+            ),
             vol.Optional(ATTR_ATTRIBUTES): dict,
             vol.Optional(
                 ATTR_REPLACE_ATTRIBUTES, default=DEFAULT_REPLACE_ATTRIBUTES
@@ -113,13 +122,18 @@ class Variable(BinarySensorEntity, RestoreEntity):
         _LOGGER.debug(
             f"({config.get(CONF_NAME, config.get(CONF_VARIABLE_ID))}) [init] config: {config}"
         )
-        if config.get(CONF_VALUE):
+        if config.get(CONF_VALUE) is None or (
+            isinstance(config.get(CONF_VALUE), str)
+            and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
+        ):
+            self._attr_is_on = None
+        elif isinstance(config.get(CONF_VALUE), str):
             if config.get(CONF_VALUE).lower() in ["true", "1", "t", "y", "yes", "on"]:
-                bool_val = True
+                self._attr_is_on = True
             else:
-                bool_val = False
+                self._attr_is_on = False
         else:
-            bool_val = None
+            self._attr_is_on = config.get(CONF_VALUE)
         self._hass = hass
         self._config = config
         self._config_entry = config_entry
@@ -131,7 +145,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
         else:
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
-        self._attr_is_on = bool_val
+        self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
@@ -159,10 +173,8 @@ class Variable(BinarySensorEntity, RestoreEntity):
             if self.entity_id:
                 try:
                     ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
-                except AttributeError as e:
-                    _LOGGER.warning(
-                        f"({self._attr_name}) [disable_recorder] AttributeError trying to disable Recorder: {e}"
-                    )
+                except AttributeError:
+                    pass
                 else:
                     _LOGGER.debug(
                         f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
@@ -185,26 +197,34 @@ class Variable(BinarySensorEntity, RestoreEntity):
                         state.attributes.copy()
                     )
                 if hasattr(state, "state"):
-                    if state.state == STATE_OFF:
+                    if state.state is None or (
+                        isinstance(state.state, str)
+                        and state.state.lower()
+                        in ["", "none", "unknown", "unavailable"]
+                    ):
+                        self._attr_is_on = None
+                    elif state.state == STATE_OFF:
                         self._attr_is_on = False
                     elif state.state == STATE_ON:
                         self._attr_is_on = True
-                    elif state.state is None:
-                        self._attr_is_on = False
                     else:
                         self._attr_is_on = state.state
                 else:
-                    self._attr_is_on = False
+                    self._attr_is_on = None
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         if RECORDER_INSTANCE in self._hass.data:
             ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
             if self.entity_id:
-                _LOGGER.debug(
-                    f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
-                )
-                ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
+                try:
+                    ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
+                except AttributeError:
+                    pass
+                else:
+                    _LOGGER.debug(
+                        f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+                    )
 
     @property
     def should_poll(self):
@@ -235,16 +255,12 @@ class Variable(BinarySensorEntity, RestoreEntity):
         else:
             return None
 
-    async def async_update_variable(
-        self,
-        value=None,
-        attributes=None,
-        replace_attributes=False,
-    ) -> None:
+    async def async_update_variable(self, **kwargs) -> None:
         """Update Binary Sensor Variable."""
 
         updated_attributes = None
 
+        replace_attributes = kwargs.get(ATTR_REPLACE_ATTRIBUTES, False)
         _LOGGER.debug(
             f"({self._attr_name}) [async_update_variable] Replace Attributes: {replace_attributes}"
         )
@@ -256,6 +272,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
         ):
             updated_attributes = copy.deepcopy(self._attr_extra_state_attributes)
 
+        attributes = kwargs.get(ATTR_ATTRIBUTES)
         if attributes is not None:
             if isinstance(attributes, MutableMapping):
                 _LOGGER.debug(
@@ -279,9 +296,29 @@ class Variable(BinarySensorEntity, RestoreEntity):
         else:
             self._attr_extra_state_attributes = None
 
-        if value is None:
-            self._attr_is_on = False
-        else:
-            self._attr_is_on = value
+        if ATTR_VALUE in kwargs:
+            if kwargs.get(ATTR_VALUE) is None or (
+                isinstance(kwargs.get(ATTR_VALUE), str)
+                and kwargs.get(ATTR_VALUE).lower()
+                in ["", "none", "unknown", "unavailable"]
+            ):
+                self._attr_is_on = None
+            elif isinstance(kwargs.get(ATTR_VALUE), str):
+                if kwargs.get(ATTR_VALUE).lower() in [
+                    "true",
+                    "1",
+                    "t",
+                    "y",
+                    "yes",
+                    "on",
+                ]:
+                    self._attr_is_on = True
+                else:
+                    self._attr_is_on = False
+            else:
+                self._attr_is_on = kwargs.get(ATTR_VALUE)
+            _LOGGER.debug(
+                f"({self._attr_name}) [async_update_variable] New Value: {self._attr_is_on}"
+            )
 
         self.async_write_ha_state()

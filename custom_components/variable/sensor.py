@@ -3,13 +3,19 @@ import copy
 import logging
 
 from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
-from homeassistant.components.sensor import PLATFORM_SCHEMA, RestoreSensor
+from homeassistant.components.sensor import (
+    CONF_STATE_CLASS,
+    PLATFORM_SCHEMA,
+    RestoreSensor,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
+    CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
+    CONF_UNIT_OF_MEASUREMENT,
     Platform,
 )
 from homeassistant.core import HomeAssistant
@@ -27,6 +33,7 @@ from .const import (
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
     CONF_VALUE,
+    CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
     CONF_YAML_VARIABLE,
     DEFAULT_EXCLUDE_FROM_RECORDER,
@@ -36,6 +43,7 @@ from .const import (
     DEFAULT_RESTORE,
     DOMAIN,
 )
+from .helpers import value_to_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -121,8 +129,6 @@ class Variable(RestoreSensor):
         else:
             self._attr_name = config.get(CONF_VARIABLE_ID)
         self._attr_icon = config.get(CONF_ICON)
-        if config.get(CONF_VALUE) is not None:
-            self._attr_native_value = config.get(CONF_VALUE)
         self._restore = config.get(CONF_RESTORE)
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
@@ -137,6 +143,22 @@ class Variable(RestoreSensor):
             )
         else:
             self._attr_extra_state_attributes = None
+        self._value_type = config.get(CONF_VALUE_TYPE)
+        self._attr_device_class = config.get(CONF_DEVICE_CLASS)
+        self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
+        self._attr_state_class = config.get(CONF_STATE_CLASS)
+        if config.get(CONF_VALUE) is None or (
+            isinstance(config.get(CONF_VALUE), str)
+            and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
+        ):
+            self._attr_native_value = None
+        else:
+            try:
+                self._attr_native_value = value_to_type(
+                    config.get(CONF_VALUE), self._value_type
+                )
+            except ValueError:
+                self._attr_native_value = None
         self.entity_id = generate_entity_id(
             ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
         )
@@ -169,7 +191,28 @@ class Variable(RestoreSensor):
                 _LOGGER.debug(
                     f"({self._attr_name}) Restored sensor: {sensor.as_dict()}"
                 )
-                self._attr_native_value = sensor.native_value
+
+                if sensor.native_value is None or (
+                    isinstance(sensor.native_value, str)
+                    and sensor.native_value.lower()
+                    in [
+                        "",
+                        "none",
+                        "unknown",
+                        "unavailable",
+                    ]
+                ):
+                    self._attr_native_value = None
+                else:
+                    try:
+                        self._attr_native_value = value_to_type(
+                            sensor.native_value, self._value_type
+                        )
+                    except ValueError:
+                        self._attr_native_value = None
+                # self._attr_native_unit_of_measurement = (
+                #    sensor.native_unit_of_measurement
+                # )
             state = await self.async_get_last_state()
             if state:
                 _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
@@ -189,25 +232,65 @@ class Variable(RestoreSensor):
                     sensor
                     and hasattr(state, "state")
                     and state.state is not None
-                    and state.state.lower() != "none"
                     and hasattr(sensor, "native_value")
                     and sensor.native_value != state.state
                 ):
-                    _LOGGER.info(
-                        f"({self._attr_name}) Restored values are different. "
-                        f"native_value: {sensor.native_value} | state: {state.state}"
-                    )
-                    self._attr_native_value = state.state
+                    if state.state is None or (
+                        isinstance(state.state, str)
+                        and state.state.lower()
+                        in [
+                            "",
+                            "none",
+                            "unknown",
+                            "unavailable",
+                        ]
+                    ):
+                        newval = None
+                    else:
+                        try:
+                            newval = value_to_type(state.state, self._value_type)
+                        except ValueError:
+                            newval = None
+
+                    _LOGGER.debug(f"({self._attr_name}) Updated state: |{newval}|")
+                    if sensor.native_value is None or (
+                        isinstance(sensor.native_value, str)
+                        and sensor.native_value.lower()
+                        in [
+                            "",
+                            "none",
+                            "unknown",
+                            "unavailable",
+                        ]
+                    ):
+                        nat_val = None
+                    else:
+                        try:
+                            nat_val = value_to_type(
+                                sensor.native_value, self._value_type
+                            )
+                        except ValueError:
+                            nat_val = None
+                    if nat_val != newval:
+                        _LOGGER.info(
+                            f"({self._attr_name}) Restored values are different. "
+                            f"native_value: {nat_val} | state: {newval}"
+                        )
+                        self._attr_native_value = newval
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
         if RECORDER_INSTANCE in self._hass.data:
             ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
             if self.entity_id:
-                _LOGGER.debug(
-                    f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
-                )
-                ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
+                try:
+                    ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
+                except AttributeError:
+                    pass
+                else:
+                    _LOGGER.debug(
+                        f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+                    )
 
     @property
     def should_poll(self):
@@ -238,16 +321,13 @@ class Variable(RestoreSensor):
         else:
             return None
 
-    async def async_update_variable(
-        self,
-        value=None,
-        attributes=None,
-        replace_attributes=False,
-    ) -> None:
+    # async def async_update_variable(self, value, attributes, replace_attributes=False) -> None:
+    async def async_update_variable(self, **kwargs) -> None:
         """Update Sensor Variable."""
 
         updated_attributes = None
 
+        replace_attributes = kwargs.get(ATTR_REPLACE_ATTRIBUTES, False)
         _LOGGER.debug(
             f"({self._attr_name}) [async_update_variable] Replace Attributes: {replace_attributes}"
         )
@@ -259,6 +339,7 @@ class Variable(RestoreSensor):
         ):
             updated_attributes = copy.deepcopy(self._attr_extra_state_attributes)
 
+        attributes = kwargs.get(ATTR_ATTRIBUTES)
         if attributes is not None:
             if isinstance(attributes, MutableMapping):
                 _LOGGER.debug(
@@ -274,6 +355,19 @@ class Variable(RestoreSensor):
                     f"({self._attr_name}) AttributeError: Attributes must be a dictionary: {attributes}"
                 )
 
+        if ATTR_VALUE in kwargs:
+            try:
+                newval = value_to_type(kwargs.get(ATTR_VALUE), self._value_type)
+            except ValueError:
+                ERROR = f"The value entered is not compatible with the selected device_class: {self._attr_device_class}. Expected: {self._value_type}. Value: {kwargs.get(ATTR_VALUE)}"
+                raise ValueError(ERROR)
+                return
+            else:
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_update_variable] New Value: {newval}"
+                )
+                self._attr_native_value = newval
+
         if updated_attributes is not None:
             self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
             _LOGGER.debug(
@@ -282,12 +376,4 @@ class Variable(RestoreSensor):
         else:
             self._attr_extra_state_attributes = None
 
-        if value is not None:
-            _LOGGER.debug(
-                f"({self._attr_name}) [async_update_variable] New Value: {value}"
-            )
-            self._attr_native_value = value
-
         self.async_write_ha_state()
-        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] self: {self}")
-        _LOGGER.debug(f"({self._attr_name}) [async_update_variable] name: {self.name}")

@@ -178,7 +178,10 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_sensor_page_2(self, user_input=None):
         errors = {}
-        if user_input is not None:
+        if (
+            user_input is not None
+            or self.add_sensor_input.get(CONF_YAML_VARIABLE) is True
+        ):
             _LOGGER.debug(f"[New Sensor Page 2] page_1_input: {self.add_sensor_input}")
             _LOGGER.debug(f"[New Sensor Page 2] page_2_input: {user_input}")
 

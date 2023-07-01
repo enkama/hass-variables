@@ -8,7 +8,7 @@ update_sensor:
   fields:
     value:
       name: New Value
-      description: New value to set (optional)
+      description: "New value to set. if a device class and native unit of measurement is set:\n- This will update the value in the native unit of measurement not necessarily the displayed unit of measurement if they are different\n- It will give an error if the value is not a supported type for the device class (ex. setting a string for a temperature device class) (optional)"
       example: 9
       selector:
         text:

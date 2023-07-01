@@ -185,6 +185,15 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug(f"[New Sensor Page 2] page_1_input: {self.add_sensor_input}")
             _LOGGER.debug(f"[New Sensor Page 2] page_2_input: {user_input}")
 
+            if self.add_sensor_input.get(CONF_YAML_VARIABLE) is True:
+                user_input = {}
+                user_input.update({CONF_VALUE: self.add_sensor_input.get(CONF_VALUE)})
+                yaml_value_type = self.yaml_import_get_value_type()
+                _LOGGER.debug(
+                    f"[YAML] device_class: {self.add_sensor_input.get('attributes',dict()).get(CONF_DEVICE_CLASS)}"
+                )
+                _LOGGER.debug(f"[YAML] value_type: {yaml_value_type}")
+                self.add_sensor_input.update({CONF_VALUE_TYPE: yaml_value_type})
             try:
                 newval = value_to_type(
                     user_input.get(CONF_VALUE),
@@ -192,8 +201,13 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
             except ValueError:
                 errors["base"] = "invalid_value_type"
+                if self.add_sensor_input.get(CONF_YAML_VARIABLE) is True:
+                    _LOGGER.error(
+                        "The value entered is not compatible with the selected device_class, setting value to None"
+                    )
+                    user_input.update({CONF_VALUE: None})
             else:
-                user_input[CONF_VALUE] = newval
+                user_input.update({CONF_VALUE: newval})
 
             _LOGGER.debug(
                 f"[New Sensor Page 2] value_type: {self.add_sensor_input.get(CONF_VALUE_TYPE)}"
@@ -202,7 +216,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 f"[New Sensor Page 2] type of value: {type(user_input.get(CONF_VALUE))}"
             )
 
-            if not errors:
+            if not errors or self.add_sensor_input.get(CONF_YAML_VARIABLE) is True:
                 if self.add_sensor_input is not None and self.add_sensor_input:
                     user_input.update(self.add_sensor_input)
                 if user_input is not None:
@@ -239,6 +253,28 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "value_type": self.add_sensor_input.get(CONF_VALUE_TYPE, "None"),
             },
         )
+
+    def yaml_import_get_value_type(self):
+        if (
+            self.add_sensor_input.get(CONF_ATTRIBUTES, {}).get(CONF_DEVICE_CLASS)
+            is None
+        ):
+            return None
+        elif self.add_sensor_input.get(CONF_ATTRIBUTES, {}).get(CONF_DEVICE_CLASS) in [
+            sensor.SensorDeviceClass.DATE
+        ]:
+            return "date"
+        elif self.add_sensor_input.get(CONF_ATTRIBUTES, {}).get(CONF_DEVICE_CLASS) in [
+            sensor.SensorDeviceClass.TIMESTAMP
+        ]:
+            return "datetime"
+        elif (
+            self.add_sensor_input.get(CONF_ATTRIBUTES, {}).get(CONF_DEVICE_CLASS)
+            == sensor.SensorDeviceClass.MONETARY
+        ):
+            return "string"
+        else:
+            return "number"
 
     def build_add_sensor_page_2(self):
         SENSOR_STATE_CLASS_SELECT_LIST = []

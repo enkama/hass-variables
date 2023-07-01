@@ -24,6 +24,8 @@ CONF_EXCLUDE_FROM_RECORDER = "exclude_from_recorder"
 
 ATTR_ATTRIBUTES = "attributes"
 ATTR_ENTITY = "entity"
+ATTR_NATIVE_UNIT_OF_MEASUREMENT = "native_unit_of_measurement"
+ATTR_SUGGESTED_UNIT_OF_MEASUREMENT = "suggested_unit_of_measurement"
 ATTR_REPLACE_ATTRIBUTES = "replace_attributes"
 ATTR_VALUE = "value"
 ATTR_VARIABLE = "variable"

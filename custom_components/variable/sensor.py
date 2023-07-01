@@ -165,6 +165,7 @@ class Variable(RestoreSensor):
         self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._attr_native_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
         self._attr_suggested_unit_of_measurement = config.get(CONF_UNIT_OF_MEASUREMENT)
+
         self._attr_state_class = config.get(CONF_STATE_CLASS)
         if (
             config.get(CONF_ATTRIBUTES) is not None
@@ -176,6 +177,7 @@ class Variable(RestoreSensor):
             )
         else:
             self._attr_extra_state_attributes = None
+
         if config.get(CONF_VALUE) is None or (
             isinstance(config.get(CONF_VALUE), str)
             and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
@@ -188,6 +190,7 @@ class Variable(RestoreSensor):
                 )
             except ValueError:
                 self._attr_native_value = None
+
         _LOGGER.debug(
             f"({self._attr_name}) [init] _attr_state: {self._attr_state if hasattr(self, '_attr_state') else None}"
         )

@@ -216,7 +216,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
-        if RECORDER_INSTANCE in self._hass.data:
+        if RECORDER_INSTANCE in self._hass.data and self._exclude_from_recorder:
             _LOGGER.debug(
                 f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
             )

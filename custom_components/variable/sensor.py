@@ -35,6 +35,7 @@ from .const import (
     CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
+    CONF_UPDATED,
     CONF_VALUE,
     CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
@@ -122,9 +123,9 @@ class Variable(RestoreSensor):
         unique_id,
     ):
         """Initialize a Sensor Variable."""
-        _LOGGER.debug(
-            f"({config.get(CONF_NAME, config.get(CONF_VARIABLE_ID))}) [init] config: {config}"
-        )
+        # _LOGGER.debug(
+        #    f"({config.get(CONF_NAME, config.get(CONF_VARIABLE_ID))}) [init] config: {config}"
+        # )
         self._hass = hass
         self._config = config
         self._config_entry = config_entry
@@ -235,14 +236,30 @@ class Variable(RestoreSensor):
                     and isinstance(state.attributes, MutableMapping)
                 ):
                     self._attr_extra_state_attributes = self._update_attr_settings(
-                        state.attributes.copy()
+                        state.attributes.copy(),
+                        just_pop=self._config.get(CONF_UPDATED, False),
                     )
+                    if self._config.get(CONF_UPDATED, True):
+                        self._attr_extra_state_attributes.pop(
+                            CONF_UNIT_OF_MEASUREMENT, None
+                        )
 
             _LOGGER.debug(
                 f"({self._attr_name}) [restored] _attr_native_value: {self._attr_native_value}"
             )
             _LOGGER.debug(
                 f"({self._attr_name}) [restored] attributes: {self._attr_extra_state_attributes}"
+            )
+        if self._config.get(CONF_UPDATED, True):
+            self._config.update({CONF_UPDATED: False})
+            self._hass.config_entries.async_update_entry(
+                self._config_entry,
+                data=self._config,
+                options=self._config_entry.options,
+            )
+            _LOGGER.debug(
+                f"({self._attr_name}) Updated config_updated: "
+                + f"{self._config_entry.data.get(CONF_UPDATED)}"
             )
 
     async def async_will_remove_from_hass(self) -> None:
@@ -269,16 +286,21 @@ class Variable(RestoreSensor):
         """Force update status of the entity."""
         return self._force_update
 
-    def _update_attr_settings(self, new_attributes=None):
+    def _update_attr_settings(self, new_attributes=None, just_pop=False):
         if new_attributes is not None:
+            _LOGGER.debug(
+                f"({self._attr_name}) [update_attr_settings] Updating Special Attributes"
+            )
             if isinstance(new_attributes, MutableMapping):
                 attributes = copy.deepcopy(new_attributes)
                 for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
                     if attrib in attributes.keys():
-                        _LOGGER.debug(
-                            f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
-                        )
-                        setattr(self, setting, attributes.pop(attrib, None))
+                        if just_pop:
+                            # _LOGGER.debug(f"({self._attr_name}) [update_attr_settings] just_pop / attrib: {attrib} / value: {attributes.get(attrib)}")
+                            attributes.pop(attrib, None)
+                        else:
+                            # _LOGGER.debug(f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}")
+                            setattr(self, setting, attributes.pop(attrib, None))
                 return copy.deepcopy(attributes)
             else:
                 _LOGGER.error(

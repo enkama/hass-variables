@@ -26,6 +26,7 @@ from .const import (
     CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
+    CONF_UPDATED,
     CONF_VALUE,
     CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
@@ -192,13 +193,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 user_input[CONF_VALUE] = newval
 
-            _LOGGER.debug(
-                f"[New Sensor Page 2] value_type: {self.add_sensor_input.get(CONF_VALUE_TYPE)}"
-            )
-            _LOGGER.debug(
-                f"[New Sensor Page 2] type of value: {type(user_input.get(CONF_VALUE))}"
-            )
-
             if not errors:
                 if self.add_sensor_input is not None and self.add_sensor_input:
                     user_input.update(self.add_sensor_input)
@@ -213,9 +207,9 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 )
 
         _LOGGER.debug(f"[New Sensor Page 2] Initial user_input: {user_input}")
-        _LOGGER.debug(
-            f"[New Sensor Page 2] device_class: {self.add_sensor_input.get(CONF_DEVICE_CLASS)}"
-        )
+        # _LOGGER.debug(
+        #    f"[New Sensor Page 2] device_class: {self.add_sensor_input.get(CONF_DEVICE_CLASS)}"
+        # )
 
         SENSOR_PAGE_2_SCHEMA = self.build_add_sensor_page_2()
 
@@ -366,7 +360,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             )
 
-        _LOGGER.debug(f"[New Sensor Page 2] value_type: {value_type}")
+        # _LOGGER.debug(f"[New Sensor Page 2] value_type: {value_type}")
         self.add_sensor_input.update({CONF_VALUE_TYPE: value_type})
         return SENSOR_PAGE_2_SCHEMA
 
@@ -523,12 +517,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             else:
                 user_input[CONF_VALUE] = newval
 
-            _LOGGER.debug(
-                f"[Sensor Options Page 2] value_type: {self.sensor_options_page_1.get(CONF_VALUE_TYPE)}"
-            )
-            _LOGGER.debug(
-                f"[Sensor Options Page 2] type of value: {type(user_input.get(CONF_VALUE))}"
-            )
+            # _LOGGER.debug(
+            #    f"[Sensor Options Page 2] value_type: {self.sensor_options_page_1.get(CONF_VALUE_TYPE)}"
+            # )
+            # _LOGGER.debug(
+            #    f"[Sensor Options Page 2] type of value: {type(user_input.get(CONF_VALUE))}"
+            # )
 
             if not errors:
                 if (
@@ -542,6 +536,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     for k, v in list(user_input.items()):
                         if v is None or (isinstance(v, str) and v.lower() == "none"):
                             user_input.pop(k, None)
+                user_input.update({CONF_UPDATED: True})
                 _LOGGER.debug(f"[Sensor Options Page 2] Final user_input: {user_input}")
                 self.config_entry.options = {}
 
@@ -554,9 +549,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 return self.async_create_entry(title="", data=user_input)
 
         _LOGGER.debug(f"[Sensor Options Page 2] Initial user_input: {user_input}")
-        _LOGGER.debug(
-            f"[Sensor Options Page 2] device_class: {self.sensor_options_page_1.get(CONF_DEVICE_CLASS)}"
-        )
+        # _LOGGER.debug(
+        #    f"[Sensor Options Page 2] device_class: {self.sensor_options_page_1.get(CONF_DEVICE_CLASS)}"
+        # )
 
         SENSOR_OPTIONS_PAGE_2_SCHEMA = self.build_sensor_options_page_2()
 
@@ -794,7 +789,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         else:
             self.sensor_options_page_1[CONF_UNIT_OF_MEASUREMENT] = None
 
-        _LOGGER.debug(f"[Sensor Options Page 2] value_type: {value_type}")
+        # _LOGGER.debug(f"[Sensor Options Page 2] value_type: {value_type}")
         self.sensor_options_page_1.update({CONF_VALUE_TYPE: value_type})
         return SENSOR_OPTIONS_PAGE_2_SCHEMA
 
@@ -806,6 +801,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.debug(f"[Binary Sensor Options] user_input: {user_input}")
             for m in dict(self.config_entry.data).keys():
                 user_input.setdefault(m, self.config_entry.data[m])
+            user_input.update({CONF_UPDATED: True})
             _LOGGER.debug(f"[Binary Sensor Options] updated user_input: {user_input}")
             self.config_entry.options = {}
 

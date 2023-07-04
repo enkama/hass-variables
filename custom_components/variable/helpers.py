@@ -22,12 +22,10 @@ def value_to_type(init_val, dest_type):  # noqa: C901
         isinstance(init_val, str)
         and init_val.lower() in ["", "none", "unknown", "unavailable"]
     ):
-        _LOGGER.debug(f"[value_to_type] value: {init_val}, returning None")
+        _LOGGER.debug(f"[value_to_type] return value: {init_val}, returning None")
         return None
 
-    _LOGGER.debug(
-        f"[value_to_type] initial value: {init_val}, initial type: {type(init_val)}, dest type: {dest_type}"
-    )
+    # _LOGGER.debug(f"[value_to_type] initial value: {init_val}, initial type: {type(init_val)}, dest type: {dest_type}")
     if isinstance(init_val, str):
         if dest_type is None or dest_type == "string":
             _LOGGER.debug(

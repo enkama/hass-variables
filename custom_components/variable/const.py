@@ -21,6 +21,7 @@ CONF_VALUE_TYPE = "value_type"
 CONF_VARIABLE_ID = "variable_id"
 CONF_YAML_VARIABLE = "yaml_variable"
 CONF_EXCLUDE_FROM_RECORDER = "exclude_from_recorder"
+CONF_UPDATED = "config_updated"
 
 ATTR_ATTRIBUTES = "attributes"
 ATTR_ENTITY = "entity"

@@ -21,6 +21,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.helpers.entity import generate_entity_id
+import homeassistant.helpers.entity_registry as er
 from homeassistant.util import slugify
 import voluptuous as vol
 
@@ -44,6 +45,7 @@ from .const import (
     DOMAIN,
 )
 from .helpers import value_to_type
+from .recorder_history_prefilter import recorder_prefilter
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -159,27 +161,26 @@ class Variable(RestoreSensor):
                 )
             except ValueError:
                 self._attr_native_value = None
-        self.entity_id = generate_entity_id(
-            ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
+
+        registry = er.async_get(self._hass)
+        current_entity_id = registry.async_get_entity_id(
+            PLATFORM, DOMAIN, self._attr_unique_id
         )
+        if current_entity_id is not None:
+            self.entity_id = current_entity_id
+        else:
+            self.entity_id = generate_entity_id(
+                ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
+            )
+        _LOGGER.debug(f"({self._attr_name}) entity_id: {self.entity_id}")
+
         if self._exclude_from_recorder:
             self.disable_recorder()
 
     def disable_recorder(self):
         if RECORDER_INSTANCE in self._hass.data:
-            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
             _LOGGER.info(f"({self._attr_name}) [disable_recorder] Disabling Recorder")
-            if self.entity_id:
-                try:
-                    ha_history_recorder.entity_filter._exclude_e.add(self.entity_id)
-                except AttributeError as e:
-                    _LOGGER.warning(
-                        f"({self._attr_name}) [disable_recorder] AttributeError trying to disable Recorder: {e}"
-                    )
-                else:
-                    _LOGGER.debug(
-                        f"({self._attr_name}) [disable_recorder] _exclude_e: {ha_history_recorder.entity_filter._exclude_e}"
-                    )
+            recorder_prefilter.add_filter(self._hass, self.entity_id)
 
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
@@ -280,17 +281,11 @@ class Variable(RestoreSensor):
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
-        if RECORDER_INSTANCE in self._hass.data:
-            ha_history_recorder = self._hass.data[RECORDER_INSTANCE]
-            if self.entity_id:
-                try:
-                    ha_history_recorder.entity_filter._exclude_e.discard(self.entity_id)
-                except AttributeError:
-                    pass
-                else:
-                    _LOGGER.debug(
-                        f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
-                    )
+        if RECORDER_INSTANCE in self._hass.data and self._exclude_from_recorder:
+            _LOGGER.debug(
+                f"({self._attr_name}) Removing entity exclusion from recorder: {self.entity_id}"
+            )
+            recorder_prefilter.remove_filter(self._hass, self.entity_id)
 
     @property
     def should_poll(self):

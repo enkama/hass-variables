@@ -136,7 +136,6 @@ ADD_BINARY_SENSOR_SCHEMA = vol.Schema(
 async def validate_sensor_input(hass: HomeAssistant, data: dict) -> dict[str, Any]:
     """Validate the user input"""
 
-    # _LOGGER.debug(f"[config_flow validate_sensor_input] data: {data}")
     if data.get(CONF_NAME):
         return {"title": data.get(CONF_NAME)}
     else:
@@ -189,10 +188,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input = {}
                 user_input.update({CONF_VALUE: self.add_sensor_input.get(CONF_VALUE)})
                 yaml_value_type = self.yaml_import_get_value_type()
-                _LOGGER.debug(
-                    f"[YAML] device_class: {self.add_sensor_input.get('attributes',dict()).get(CONF_DEVICE_CLASS)}"
-                )
-                _LOGGER.debug(f"[YAML] value_type: {yaml_value_type}")
                 self.add_sensor_input.update({CONF_VALUE_TYPE: yaml_value_type})
             try:
                 newval = value_to_type(
@@ -209,13 +204,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 user_input.update({CONF_VALUE: newval})
 
-            _LOGGER.debug(
-                f"[New Sensor Page 2] value_type: {self.add_sensor_input.get(CONF_VALUE_TYPE)}"
-            )
-            _LOGGER.debug(
-                f"[New Sensor Page 2] type of value: {type(user_input.get(CONF_VALUE))}"
-            )
-
             if not errors or self.add_sensor_input.get(CONF_YAML_VARIABLE) is True:
                 if self.add_sensor_input is not None and self.add_sensor_input:
                     user_input.update(self.add_sensor_input)
@@ -228,11 +216,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return self.async_create_entry(
                     title=info.get("title", ""), data=user_input
                 )
-
-        _LOGGER.debug(f"[New Sensor Page 2] Initial user_input: {user_input}")
-        _LOGGER.debug(
-            f"[New Sensor Page 2] device_class: {self.add_sensor_input.get(CONF_DEVICE_CLASS)}"
-        )
 
         SENSOR_PAGE_2_SCHEMA = self.build_add_sensor_page_2()
 
@@ -363,13 +346,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
             value_type = "string"
 
-        # _LOGGER.debug(
-        #    f"[New Sensor Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
-        # )
-        # _LOGGER.debug(
-        #    f"[New Sensor Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
-        # )
-
         SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
             {
                 vol.Optional(CONF_ATTRIBUTES): selector.ObjectSelector(
@@ -405,7 +381,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             )
 
-        _LOGGER.debug(f"[New Sensor Page 2] value_type: {value_type}")
         self.add_sensor_input.update({CONF_VALUE_TYPE: value_type})
         return SENSOR_PAGE_2_SCHEMA
 
@@ -442,7 +417,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_import(self, import_config=None) -> FlowResult:
         """Import a config entry from configuration.yaml."""
 
-        # _LOGGER.debug(f"[async_step_import] import_config: {import_config)}")
         return await self.async_step_add_sensor(
             user_input=import_config, yaml_variable=True
         )
@@ -467,10 +441,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Manage the options."""
-
-        # _LOGGER.debug("Starting Options")
-        # _LOGGER.debug(f"[Options] initial config: {self.config_entry.data)}")
-        # _LOGGER.debug(f"[Options] initial options: {self.config_entry.options)}")
 
         if not self.config_entry.data.get(CONF_YAML_VARIABLE):
             if self.config_entry.data.get(CONF_ENTITY_PLATFORM) in PLATFORMS and (
@@ -562,13 +532,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             else:
                 user_input[CONF_VALUE] = newval
 
-            _LOGGER.debug(
-                f"[Sensor Options Page 2] value_type: {self.sensor_options_page_1.get(CONF_VALUE_TYPE)}"
-            )
-            _LOGGER.debug(
-                f"[Sensor Options Page 2] type of value: {type(user_input.get(CONF_VALUE))}"
-            )
-
             if not errors:
                 if (
                     self.sensor_options_page_1 is not None
@@ -591,11 +554,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 )
                 await self.hass.config_entries.async_reload(self.config_entry.entry_id)
                 return self.async_create_entry(title="", data=user_input)
-
-        _LOGGER.debug(f"[Sensor Options Page 2] Initial user_input: {user_input}")
-        _LOGGER.debug(
-            f"[Sensor Options Page 2] device_class: {self.sensor_options_page_1.get(CONF_DEVICE_CLASS)}"
-        )
 
         SENSOR_OPTIONS_PAGE_2_SCHEMA = self.build_sensor_options_page_2()
 
@@ -767,13 +725,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     }
                 )
 
-        # _LOGGER.debug(
-        #    f"[Sensor Options Page 2] SENSOR_STATE_CLASS_SELECT_LIST: {SENSOR_STATE_CLASS_SELECT_LIST}"
-        # )
-        # _LOGGER.debug(
-        #    f"[Sensor Options Page 2] SENSOR_UNITS_SELECT_LIST: {SENSOR_UNITS_SELECT_LIST}"
-        # )
-
         SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
             {
                 vol.Optional(
@@ -833,7 +784,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         else:
             self.sensor_options_page_1[CONF_UNIT_OF_MEASUREMENT] = None
 
-        _LOGGER.debug(f"[Sensor Options Page 2] value_type: {value_type}")
         self.sensor_options_page_1.update({CONF_VALUE_TYPE: value_type})
         return SENSOR_OPTIONS_PAGE_2_SCHEMA
 

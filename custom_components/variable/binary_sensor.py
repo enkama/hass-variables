@@ -30,6 +30,7 @@ from .const import (
     CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
+    CONF_UPDATED,
     CONF_VALUE,
     CONF_VARIABLE_ID,
     CONF_YAML_VARIABLE,
@@ -63,7 +64,11 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 SERVICE_UPDATE_VARIABLE = "update_" + PLATFORM
 
-VARIABLE_ATTR_SETTINGS = {ATTR_FRIENDLY_NAME: "_attr_name", ATTR_ICON: "_attr_icon"}
+VARIABLE_ATTR_SETTINGS = {
+    ATTR_FRIENDLY_NAME: "_attr_name",
+    ATTR_ICON: "_attr_icon",
+    CONF_DEVICE_CLASS: "_attr_device_class",
+}
 
 
 async def async_setup_entry(
@@ -187,14 +192,15 @@ class Variable(BinarySensorEntity, RestoreEntity):
             _LOGGER.info(f"({self._attr_name}) Restoring after Reboot")
             state = await self.async_get_last_state()
             if state:
-                _LOGGER.debug(f"({self._attr_name}) Restored state: {state.as_dict()}")
+                # _LOGGER.debug(f"({self._attr_name}) Restored last state: {state.as_dict()}")
                 if (
                     hasattr(state, "attributes")
                     and state.attributes
                     and isinstance(state.attributes, MutableMapping)
                 ):
                     self._attr_extra_state_attributes = self._update_attr_settings(
-                        state.attributes.copy()
+                        state.attributes.copy(),
+                        just_pop=self._config.get(CONF_UPDATED, False),
                     )
                 if hasattr(state, "state"):
                     if state.state is None or (
@@ -211,6 +217,23 @@ class Variable(BinarySensorEntity, RestoreEntity):
                         self._attr_is_on = state.state
                 else:
                     self._attr_is_on = None
+            _LOGGER.debug(
+                f"({self._attr_name}) [restored] _attr_is_on: {self._attr_is_on}"
+            )
+            _LOGGER.debug(
+                f"({self._attr_name}) [restored] attributes: {self._attr_extra_state_attributes}"
+            )
+        if self._config.get(CONF_UPDATED, True):
+            self._config.update({CONF_UPDATED: False})
+            self._hass.config_entries.async_update_entry(
+                self._config_entry,
+                data=self._config,
+                options=self._config_entry.options,
+            )
+            _LOGGER.debug(
+                f"({self._attr_name}) Updated config_updated: "
+                + f"{self._config_entry.data.get(CONF_UPDATED)}"
+            )
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
@@ -236,16 +259,21 @@ class Variable(BinarySensorEntity, RestoreEntity):
         """Force update status of the entity."""
         return self._force_update
 
-    def _update_attr_settings(self, new_attributes=None):
+    def _update_attr_settings(self, new_attributes=None, just_pop=False):
         if new_attributes is not None:
+            _LOGGER.debug(
+                f"({self._attr_name}) [update_attr_settings] Updating Special Attributes"
+            )
             if isinstance(new_attributes, MutableMapping):
                 attributes = copy.deepcopy(new_attributes)
                 for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
                     if attrib in attributes.keys():
-                        _LOGGER.debug(
-                            f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}"
-                        )
-                        setattr(self, setting, attributes.pop(attrib, None))
+                        if just_pop:
+                            # _LOGGER.debug(f"({self._attr_name}) [update_attr_settings] just_pop / attrib: {attrib} / value: {attributes.get(attrib)}")
+                            attributes.pop(attrib, None)
+                        else:
+                            # _LOGGER.debug(f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}")
+                            setattr(self, setting, attributes.pop(attrib, None))
                 return copy.deepcopy(attributes)
             else:
                 _LOGGER.error(

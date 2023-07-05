@@ -8,7 +8,7 @@ update_sensor:
   fields:
     value:
       name: New Value
-      description: New value to set (optional)
+      description: "New value to set. If a device class and native unit of measurement is set: 1. This will update the value in the native unit of measurement not necessarily the displayed unit of measurement if they are different. 2. It will give an error if the value is not a supported type for the device class (ex. setting a string for a temperature device class) (optional)"
       example: 9
       selector:
         text:
@@ -72,26 +72,26 @@ set_variable:
     # Key of the field
     variable:
       name: Variable ID
-      description: string (required) The name of the Sensor Variable to update
+      description: The name of the Sensor Variable to update [string] (required)
       required: true
       example: test_counter
       selector:
         text:
     value:
       name: New Value
-      description: any (optional) New value to set
+      description: "New value to set. If a device class and native unit of measurement is set: 1. This will update the value in the native unit of measurement not necessarily the displayed unit of measurement if they are different. 2. It will give an error if the value is not a supported type for the device class (ex. setting a string for a temperature device class) (optional)"
       example: 9
       selector:
         text:
     attributes:
       name: New Attributes
-      description: dictionary (optional) Attributes to set or update
+      description: Attributes to set or update [dictionary] (optional)
       example: "{'key': 'value'}"
       selector:
         object:
     replace_attributes:
       name: Replace Attributes
-      description: boolean (optional) Replace or merge current attributes (default false = merge)
+      description: Replace or merge current attributes [boolean] (optional) (default false = merge)
       required: true
       default: false
       example: "false"
@@ -104,7 +104,7 @@ set_entity:
   fields:
     entity:
       name: Entity ID
-      description: string (required) The entity_id of the Sensor Variable to update
+      description: The entity_id of the Sensor Variable to update [string] (required)
       example: sensor.test_sensor
       required: true
       selector:
@@ -113,19 +113,19 @@ set_entity:
           domain: sensor
     value:
       name: New Value
-      description: any (optional) New value to set
+      description: "New value to set. If a device class and native unit of measurement is set: 1. This will update the value in the native unit of measurement not necessarily the displayed unit of measurement if they are different. 2. It will give an error if the value is not a supported type for the device class (ex. setting a string for a temperature device class) (optional)"
       example: 9
       selector:
         text:
     attributes:
       name: New Attributes
-      description: dictionary (optional) Attributes to set or update
+      description: Attributes to set or update [dictionary] (optional)
       example: "{'key': 'value'}"
       selector:
         object:
     replace_attributes:
       name: Replace Attributes
-      description: boolean (optional) Replace or merge current attributes (default false = merge)
+      description: Replace or merge current attributes [boolean] (optional) (default false = merge)
       required: true
       default: false
       example: "false"

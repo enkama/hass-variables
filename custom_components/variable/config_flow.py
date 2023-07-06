@@ -26,6 +26,7 @@ from .const import (
     CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
+    CONF_UPDATED,
     CONF_VALUE,
     CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
@@ -544,6 +545,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     for k, v in list(user_input.items()):
                         if v is None or (isinstance(v, str) and v.lower() == "none"):
                             user_input.pop(k, None)
+                user_input.update({CONF_UPDATED: True})
                 _LOGGER.debug(f"[Sensor Options Page 2] Final user_input: {user_input}")
                 self.config_entry.options = {}
 
@@ -795,6 +797,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.debug(f"[Binary Sensor Options] user_input: {user_input}")
             for m in dict(self.config_entry.data).keys():
                 user_input.setdefault(m, self.config_entry.data[m])
+            user_input.update({CONF_UPDATED: True})
             _LOGGER.debug(f"[Binary Sensor Options] updated user_input: {user_input}")
             self.config_entry.options = {}
 

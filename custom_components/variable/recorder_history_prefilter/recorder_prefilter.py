@@ -22,7 +22,7 @@
 #       multiple entities - list of entity ids
 #
 #       'sensor.' will be added to the beginning of the entity id
-#       if its type is not specifid
+#       if its type is not specified
 #
 #     recorder_prefilter.add_filter(hass, 'filter_id1')
 #     recorder_prefilter.add_filter(hass, ['filter_entity2', 'filter_entity3'])
@@ -44,8 +44,8 @@
 #      detection and location based automations.
 # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-import logging
 from inspect import getframeinfo, stack
+import logging
 
 from homeassistant.core import HomeAssistant
 
@@ -127,8 +127,7 @@ def _inject_filter(hass: HomeAssistant):
         """
         if (
             entity_id
-            and entity_id
-            in hass.data["recorder_prefilter"]["exclude_entities"]
+            and entity_id in hass.data["recorder_prefilter"]["exclude_entities"]
         ):
             return False
 
@@ -136,9 +135,7 @@ def _inject_filter(hass: HomeAssistant):
 
     try:
         _LOGGER.info("Recorder Prefilter Injection Started")
-        _LOGGER.debug(
-            "Injecting Custom Exclude Entity Prefilter into Recorder"
-        )
+        _LOGGER.debug("Injecting Custom Exclude Entity Prefilter into Recorder")
         ha_recorder.entity_filter = entity_filter
 
         _LOGGER.debug("Removing Recorder Event Listener")

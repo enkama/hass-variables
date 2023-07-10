@@ -27,6 +27,7 @@ def value_to_type(init_val, dest_type):  # noqa: C901
 
     # _LOGGER.debug(f"[value_to_type] initial value: {init_val}, initial type: {type(init_val)}, dest type: {dest_type}")
     if isinstance(init_val, str):
+        # _LOGGER.debug("[value_to_type] Processing as string")
         if dest_type is None or dest_type == "string":
             _LOGGER.debug(
                 f"[value_to_type] return value: {init_val}, type: {type(init_val)}"
@@ -79,6 +80,7 @@ def value_to_type(init_val, dest_type):  # noqa: C901
             raise ValueError(f"Invalid dest_type: {dest_type}")
             return None
     elif isinstance(init_val, int) or isinstance(init_val, float):
+        # _LOGGER.debug("[value_to_type] Processing as number")
         if dest_type is None or dest_type == "string":
             _LOGGER.debug(
                 f"[value_to_type] return value: {str(init_val)}, type: {type(str(init_val))}"
@@ -122,7 +124,8 @@ def value_to_type(init_val, dest_type):  # noqa: C901
             _LOGGER.debug(f"Invalid dest_type: {dest_type}, returning None")
             raise ValueError(f"Invalid dest_type: {dest_type}")
             return None
-    elif isinstance(init_val, datetime.date):
+    elif isinstance(init_val, datetime.date) and type(init_val) == datetime.date:
+        # _LOGGER.debug("[value_to_type] Processing as date")
         if dest_type is None or dest_type == "string":
             _LOGGER.debug(
                 f"[value_to_type] return value: {init_val.isoformat()}, type: {type(init_val.isoformat())}"
@@ -149,7 +152,10 @@ def value_to_type(init_val, dest_type):  # noqa: C901
             _LOGGER.debug(f"Invalid dest_type: {dest_type}, returning None")
             raise ValueError(f"Invalid dest_type: {dest_type}")
             return None
-    elif isinstance(init_val, datetime.datetime):
+    elif (
+        isinstance(init_val, datetime.datetime) and type(init_val) == datetime.datetime
+    ):
+        # _LOGGER.debug("[value_to_type] Processing as datetime")
         if dest_type is None or dest_type == "string":
             _LOGGER.debug(
                 f"[value_to_type] return value: {init_val.isoformat()}, type: {type(init_val.isoformat())}"

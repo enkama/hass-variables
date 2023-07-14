@@ -69,23 +69,22 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
 
         # _LOGGER.debug(f"[async_set_variable_legacy_service] Pre call data: {call.data}")
         ENTITY_ID_FORMAT = Platform.SENSOR + ".{}"
-        entity_id = ENTITY_ID_FORMAT.format(call.data.get(ATTR_VARIABLE))
-        call.data.update({ATTR_ENTITY: entity_id})
+        var_ent = ENTITY_ID_FORMAT.format(call.data.get(ATTR_VARIABLE))
         # _LOGGER.debug(f"[async_set_variable_legacy_service] Post call data: {call.data}")
-        await _async_set_legacy_service(call)
+        await _async_set_legacy_service(call, var_ent)
 
     async def async_set_entity_legacy_service(call):
         """Handle calls to the set_entity legacy service."""
 
         # _LOGGER.debug(f"[async_set_entity_legacy_service] call data: {call.data}")
-        await _async_set_legacy_service(call)
+        await _async_set_legacy_service(call, call.data.get(ATTR_ENTITY))
 
-    async def _async_set_legacy_service(call):
+    async def _async_set_legacy_service(call, var_ent):
         """Shared function for both set_entity and set_variable legacy services."""
 
         # _LOGGER.debug(f"[_async_set_legacy_service] call data: {call.data}")
         update_sensor_data = {
-            CONF_ENTITY_ID: [call.data.get(ATTR_ENTITY)],
+            CONF_ENTITY_ID: [var_ent],
             ATTR_REPLACE_ATTRIBUTES: call.data.get(ATTR_REPLACE_ATTRIBUTES, False),
         }
         if call.data.get(ATTR_VALUE):

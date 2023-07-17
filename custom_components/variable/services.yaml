@@ -63,6 +63,85 @@ update_binary_sensor:
       selector:
         boolean:
 
+update_device_tracker:
+  name: Update Device Tracker (GPS) Variable
+  description: Update a Device Tracker (GPS) Variable.
+  target:
+    entity:
+      integration: variable
+      domain: device_tracker
+  fields:
+    latitude:
+      name: Latitude
+      description: New Latitude
+      example: 38.889466
+      selector:
+        number:
+          min: -90
+          max: 90
+          step: "any"
+          unit_of_measurement: "°"
+          mode: box
+    longitude:
+      name: Longitude
+      description: New Longitude
+      example: -77.035235
+      selector:
+        number:
+          min: -180
+          max: 180
+          step: "any"
+          unit_of_measurement: "°"
+          mode: box
+    location_name:
+      name: Location Name
+      description: New Location Name
+      example: "School"
+      selector:
+        text:
+    delete_location_name:
+      name: Delete Location Name
+      selector:
+        constant:
+          label: Will Delete
+          value: true
+    gps_accuracy:
+      name: GPS Accuracy
+      description: New GPS Accuracy
+      example: 5
+      selector:
+        number:
+          min: 0
+          max: 1000000
+          step: 1
+          unit_of_measurement: "m"
+          mode: box
+    battery_level:
+      name: Battery Level
+      description: New Battery Level
+      example: 99
+      selector:
+        number:
+          min: 0
+          max: 100
+          step: 1
+          unit_of_measurement: "%"
+          mode: box
+    attributes:
+      name: New Attributes
+      description: Attributes to set or update [dictionary] (optional)
+      example: "{'key': 'value'}"
+      selector:
+        object:
+    replace_attributes:
+      name: Replace Attributes
+      description: Replace or merge current attributes [boolean] (optional) (default false = merge)
+      required: true
+      default: false
+      example: "false"
+      selector:
+        boolean:
+
 set_variable:
   # Description of the service
   name: Set Variable (Legacy)

@@ -6,6 +6,7 @@ from typing import final
 from homeassistant.components.device_tracker import (
     ATTR_LOCATION_NAME,
     ATTR_SOURCE_TYPE,
+    PLATFORM_SCHEMA,
     SourceType,
     TrackerEntity,
 )
@@ -53,6 +54,8 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORM = Platform.DEVICE_TRACKER
 ENTITY_ID_FORMAT = PLATFORM + ".{}"
 SERVICE_UPDATE_VARIABLE = "update_" + PLATFORM
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({})
 
 VARIABLE_ATTR_SETTINGS = {
     ATTR_FRIENDLY_NAME: "_attr_name",

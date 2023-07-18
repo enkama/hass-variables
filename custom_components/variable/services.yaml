@@ -101,6 +101,7 @@ update_device_tracker:
         text:
     delete_location_name:
       name: Delete Location Name
+      description: Remove the Location Name so state will be based on Lat/Long
       selector:
         constant:
           label: Will Delete

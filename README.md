@@ -84,6 +84,26 @@ Name | Required | Default | Description |
 </details>
 
 <details>
+<summary><h3>Device Tracker</h3></summary>
+
+Name | Required | Default | Description |
+-- | -- | -- | --
+`Variable ID` | `Yes` | | The desired id of the new device tracker (ex. `test_variable` would create an entity_id of `device_tracker.test_variable`)
+`Name` | `No` | | Friendly name of the variable device tracker
+`Icon` | `No` | `mdi:variable` | Icon of the Variable
+`Initial Latitude` | `Yes` | | Latitude
+`Initial Longitude` | `Yes` | | Longitude
+`Initial Location Name` | `No` | | If set, will show this as the state
+`Initial GPS Accuracy` | `No` | | Accuracy in meters
+`Initial Battery Level` | `No` | | Battery level from 0-100%
+`Initial Attributes` | `No` | | Initial attributes of the variable
+`Restore on Restart` | `No` | `True` | If `True` will restore previous value on restart. If `False`, will reset to `Initial Latitude`, `Initial Longitude`, `Initial Location Name`, `Initial GPS Accuracy`, `Initial Battery Level`, and `Initial Attributes` on restart
+`Force Update` | `No` | `False` | Variable's `last_updated` time will change with any service calls to update the variable even if the value does not change
+`Exclude from Recorder` | `No` | `False` | For Variables with large attributes (>16 kB), enable this to prevent Recorder Errors.
+
+</details>
+
+<details>
 <summary><h2>Alternate YAML Configuration</h2></summary>
 
 **Variables created via YAML will all start with `sensor.` and cannot be edited in the UI.**
@@ -148,7 +168,6 @@ Name | Key | Required | Default | Description |
 `New Attributes` | `attributes` | `No` | | What to update the attributes to
 `Replace Attributes` | `replace_attributes` | `No` | `False` | Replace or merge current attributes (`False` = merge)
 
-
 ### `variable.update_binary_sensor`
 
 Used to update the value or attributes of a Binary Sensor Variable
@@ -157,6 +176,22 @@ Name | Key | Required | Default | Description |
 -- | -- | -- | -- | -- |
 `Targets` | `target:`<br />&nbsp;&nbsp;`entity_id:`  | `Yes` | | The entity_ids of one or more binary sensor variables to update (ex. `binary_sensor.test_variable`)
 `New Value` | `value` | `No` | | Value/state to change the variable to
+`New Attributes` | `attributes` | `No` | | What to update the attributes to
+`Replace Attributes` | `replace_attributes` | `No` | `False` | Replace or merge current attributes (`False` = merge)
+
+### `variable.update_device_tracker`
+
+Used to update the value or attributes of a Device Tracker Variable
+
+Name | Key | Required | Default | Description |
+-- | -- | -- | -- | -- |
+`Targets` | `target:`<br />&nbsp;&nbsp;`entity_id:`  | `Yes` | | The entity_ids of one or more device tracker variables to update (ex. `device_tracker.test_variable`)
+`Latitude` | `latitude` | `No` | | Latitude
+`Longitude` | `longitude` | `No` | | Longitude
+`Location Name` | `location_name` | `No` | | If set, will show this as the state
+`Delete Location Name` | `delete_location_name` | `No` | | Remove the Location Name so state will be based on Lat/Long (`boolean`)  
+`GPS Accuracy` | `gps_accuracy` | `No` | | Accuracy in meters
+`Battery Level` | `battery_level` | `No` | | Battery level from 0-100%
 `New Attributes` | `attributes` | `No` | | What to update the attributes to
 `Replace Attributes` | `replace_attributes` | `No` | `False` | Replace or merge current attributes (`False` = merge)
 

@@ -160,11 +160,21 @@ Name | Key | Required | Default | Description |
 `New Attributes` | `attributes` | `No` | | What to update the attributes to
 `Replace Attributes` | `replace_attributes` | `No` | `False` | Replace or merge current attributes (`False` = merge)
 
+### `variable.toggle_binary_sensor`
+
+Used to toggle the state or update attributes of a Binary Sensor Variable. If the binary_sensor state is None, the toggle service will not change the state.
+
+Name | Key | Required | Default | Description |
+-- | -- | -- | -- | -- |
+`Targets` | `target:`<br />&nbsp;&nbsp;`entity_id:`  | `Yes` | | The entity_ids of one or more binary sensor variables to toggle (ex. `binary_sensor.test_variable`)
+`New Attributes` | `attributes` | `No` | | What to update the attributes to
+`Replace Attributes` | `replace_attributes` | `No` | `False` | Replace or merge current attributes (`False` = merge)
+
 <details>
 <summary><h2>Legacy Services</h2></summary>
 
 #### These will only work for Sensor Variables
-_These services are from the previous version of the integration and are being kept for pre-existing automations and scripts. In general, the new `variable.update_` services above should be used going forward._
+_These services are from the previous version of the integration and are being kept for pre-existing automations and scripts. In general, the new `variable.update_` and `variable.toggle_` services above should be used going forward._
 
 Both services are similar and used to update the value or attributes of a Sensor Variable. `variable.set_variable` uses just the `variable_id` and `variable.set_entity` uses the full `entity_id`. There are instructions and selectors when the service is called from the Developer Tools or within a Script or Automation.
 

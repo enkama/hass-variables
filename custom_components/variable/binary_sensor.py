@@ -2,7 +2,7 @@ from collections.abc import MutableMapping
 import copy
 import logging
 
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.components.recorder import DATA_INSTANCE as RECORDER_INSTANCE
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -46,6 +46,8 @@ ENTITY_ID_FORMAT = PLATFORM + ".{}"
 
 SERVICE_UPDATE_VARIABLE = "update_" + PLATFORM
 SERVICE_TOGGLE_VARIABLE = "toggle_" + PLATFORM
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({})
 
 VARIABLE_ATTR_SETTINGS = {
     ATTR_FRIENDLY_NAME: "_attr_name",

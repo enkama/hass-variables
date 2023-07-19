@@ -63,6 +63,29 @@ update_binary_sensor:
       selector:
         boolean:
 
+toggle_binary_sensor:
+  name: Toggle Binary Sensor Variable
+  description: Toggle a Binary Sensor Variable value and/or Update its attributes.
+  target:
+    entity:
+      integration: variable
+      domain: binary_sensor
+  fields:
+    attributes:
+      name: New Attributes
+      description: Attributes to set or update [dictionary] (optional)
+      example: "{'key': 'value'}"
+      selector:
+        object:
+    replace_attributes:
+      name: Replace Attributes
+      description: Replace or merge current attributes [boolean] (optional) (default false = merge)
+      required: true
+      default: false
+      example: "false"
+      selector:
+        boolean:
+
 set_variable:
   # Description of the service
   name: Set Variable (Legacy)

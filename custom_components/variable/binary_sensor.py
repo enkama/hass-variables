@@ -18,6 +18,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, entity_platform, selector
 from homeassistant.helpers.entity import generate_entity_id
+import homeassistant.helpers.entity_registry as er
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
 import voluptuous as vol
@@ -34,11 +35,7 @@ from .const import (
     CONF_VALUE,
     CONF_VARIABLE_ID,
     CONF_YAML_VARIABLE,
-    DEFAULT_EXCLUDE_FROM_RECORDER,
-    DEFAULT_FORCE_UPDATE,
-    DEFAULT_ICON,
     DEFAULT_REPLACE_ATTRIBUTES,
-    DEFAULT_RESTORE,
     DOMAIN,
 )
 from .recorder_history_prefilter import recorder_prefilter
@@ -48,22 +45,10 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORM = Platform.BINARY_SENSOR
 ENTITY_ID_FORMAT = PLATFORM + ".{}"
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_VARIABLE_ID): cv.string,
-        vol.Optional(CONF_NAME): cv.string,
-        vol.Optional(CONF_ICON, default=DEFAULT_ICON): cv.string,
-        vol.Optional(CONF_VALUE): cv.boolean,
-        vol.Optional(CONF_ATTRIBUTES): dict,
-        vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): cv.boolean,
-        vol.Optional(CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE): cv.boolean,
-        vol.Optional(
-            CONF_EXCLUDE_FROM_RECORDER, default=DEFAULT_EXCLUDE_FROM_RECORDER
-        ): cv.boolean,
-    }
-)
-
 SERVICE_UPDATE_VARIABLE = "update_" + PLATFORM
+SERVICE_TOGGLE_VARIABLE = "toggle_" + PLATFORM
+
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({})
 
 VARIABLE_ATTR_SETTINGS = {
     ATTR_FRIENDLY_NAME: "_attr_name",
@@ -101,6 +86,17 @@ async def async_setup_entry(
             ): cv.boolean,
         },
         "async_update_variable",
+    )
+
+    platform.async_register_entity_service(
+        SERVICE_TOGGLE_VARIABLE,
+        {
+            vol.Optional(ATTR_ATTRIBUTES): dict,
+            vol.Optional(
+                ATTR_REPLACE_ATTRIBUTES, default=DEFAULT_REPLACE_ATTRIBUTES
+            ): cv.boolean,
+        },
+        "async_toggle_variable",
     )
 
     config = hass.data.get(DOMAIN).get(config_entry.entry_id)
@@ -166,9 +162,17 @@ class Variable(BinarySensorEntity, RestoreEntity):
             )
         else:
             self._attr_extra_state_attributes = None
-        self.entity_id = generate_entity_id(
-            ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
+        registry = er.async_get(self._hass)
+        current_entity_id = registry.async_get_entity_id(
+            PLATFORM, DOMAIN, self._attr_unique_id
         )
+        if current_entity_id is not None:
+            self.entity_id = current_entity_id
+        else:
+            self.entity_id = generate_entity_id(
+                ENTITY_ID_FORMAT, self._variable_id, hass=self._hass
+            )
+        _LOGGER.debug(f"({self._attr_name}) [init] entity_id: {self.entity_id}")
         if self._exclude_from_recorder:
             self.disable_recorder()
 
@@ -334,5 +338,54 @@ class Variable(BinarySensorEntity, RestoreEntity):
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] New Value: {self._attr_is_on}"
             )
+
+        self.async_write_ha_state()
+
+    async def async_toggle_variable(self, **kwargs) -> None:
+        """Toggle Binary Sensor Variable."""
+
+        updated_attributes = None
+
+        replace_attributes = kwargs.get(ATTR_REPLACE_ATTRIBUTES, False)
+        _LOGGER.debug(
+            f"({self._attr_name}) [async_toggle_variable] Replace Attributes: {replace_attributes}"
+        )
+
+        if (
+            not replace_attributes
+            and hasattr(self, "_attr_extra_state_attributes")
+            and self._attr_extra_state_attributes is not None
+        ):
+            updated_attributes = copy.deepcopy(self._attr_extra_state_attributes)
+
+        attributes = kwargs.get(ATTR_ATTRIBUTES)
+        if attributes is not None:
+            if isinstance(attributes, MutableMapping):
+                _LOGGER.debug(
+                    f"({self._attr_name}) [async_toggle_variable] New Attributes: {attributes}"
+                )
+                extra_attributes = self._update_attr_settings(attributes)
+                if updated_attributes is not None:
+                    updated_attributes.update(extra_attributes)
+                else:
+                    updated_attributes = extra_attributes
+            else:
+                _LOGGER.error(
+                    f"({self._attr_name}) AttributeError: Attributes must be a dictionary: {attributes}"
+                )
+
+        if updated_attributes is not None:
+            self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
+            _LOGGER.debug(
+                f"({self._attr_name}) [async_toggle_variable] Final Attributes: {updated_attributes}"
+            )
+        else:
+            self._attr_extra_state_attributes = None
+
+        if self._attr_is_on is not None:
+            self._attr_is_on = not self._attr_is_on
+        _LOGGER.debug(
+            f"({self._attr_name}) [async_toggle_variable] New Value: {self._attr_is_on}"
+        )
 
         self.async_write_ha_state()

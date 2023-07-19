@@ -145,7 +145,7 @@ ADD_DEVICE_TRACKER_SCHEMA = vol.Schema(
         vol.Optional(CONF_ICON, default=DEFAULT_ICON): selector.IconSelector(
             selector.IconSelectorConfig()
         ),
-        vol.Required(ATTR_LATITUDE): selector.NumberSelector(
+        vol.Required(ATTR_LATITUDE, default=""): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=-90,
                 max=90,
@@ -154,7 +154,7 @@ ADD_DEVICE_TRACKER_SCHEMA = vol.Schema(
                 mode=selector.NumberSelectorMode.BOX,
             )
         ),
-        vol.Required(ATTR_LONGITUDE): selector.NumberSelector(
+        vol.Required(ATTR_LONGITUDE, default=""): selector.NumberSelector(
             selector.NumberSelectorConfig(
                 min=-180,
                 max=180,
@@ -1008,34 +1008,88 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                         mode=selector.NumberSelectorMode.BOX,
                     )
                 ),
-                vol.Optional(
-                    ATTR_LOCATION_NAME,
-                    default=self.config_entry.data.get(ATTR_LOCATION_NAME),
-                ): cv.string,
-                vol.Optional(
-                    ATTR_GPS_ACCURACY,
-                    default=self.config_entry.data.get(ATTR_GPS_ACCURACY),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0,
-                        max=1000000,
-                        step=1,
-                        unit_of_measurement="m",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                ),
-                vol.Optional(
-                    ATTR_BATTERY_LEVEL,
-                    default=self.config_entry.data.get(ATTR_BATTERY_LEVEL),
-                ): selector.NumberSelector(
-                    selector.NumberSelectorConfig(
-                        min=0,
-                        max=100,
-                        step=1,
-                        unit_of_measurement="%",
-                        mode=selector.NumberSelectorMode.BOX,
-                    )
-                ),
+            }
+        )
+        if self.config_entry.data.get(ATTR_LOCATION_NAME) is None:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(ATTR_LOCATION_NAME): cv.string,
+                }
+            )
+        else:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        ATTR_LOCATION_NAME,
+                        default=self.config_entry.data.get(ATTR_LOCATION_NAME),
+                    ): cv.string,
+                }
+            )
+        if self.config_entry.data.get(ATTR_GPS_ACCURACY) is None:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(ATTR_GPS_ACCURACY): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=1000000,
+                            step=1,
+                            unit_of_measurement="m",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+        else:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        ATTR_GPS_ACCURACY,
+                        default=self.config_entry.data.get(ATTR_GPS_ACCURACY),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=1000000,
+                            step=1,
+                            unit_of_measurement="m",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+        if self.config_entry.data.get(ATTR_BATTERY_LEVEL) is None:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(ATTR_BATTERY_LEVEL,): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=100,
+                            step=1,
+                            unit_of_measurement="%",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+        else:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        ATTR_BATTERY_LEVEL,
+                        default=self.config_entry.data.get(ATTR_BATTERY_LEVEL),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=100,
+                            step=1,
+                            unit_of_measurement="%",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+
+        DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+            {
                 vol.Optional(
                     CONF_ATTRIBUTES, default=self.config_entry.data.get(CONF_ATTRIBUTES)
                 ): selector.ObjectSelector(selector.ObjectSelectorConfig()),

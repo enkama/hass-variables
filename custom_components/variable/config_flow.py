@@ -6,7 +6,12 @@ from typing import Any
 
 from homeassistant import config_entries
 from homeassistant.components import binary_sensor, sensor
+from homeassistant.components.device_tracker import ATTR_LOCATION_NAME
 from homeassistant.const import (
+    ATTR_BATTERY_LEVEL,
+    ATTR_GPS_ACCURACY,
+    ATTR_LATITUDE,
+    ATTR_LONGITUDE,
     CONF_DEVICE_CLASS,
     CONF_ICON,
     CONF_NAME,
@@ -120,6 +125,65 @@ ADD_BINARY_SENSOR_SCHEMA = vol.Schema(
                 custom_value=False,
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
+        ),
+        vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
+            selector.BooleanSelectorConfig()
+        ),
+        vol.Optional(
+            CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
+        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+        vol.Optional(
+            CONF_EXCLUDE_FROM_RECORDER, default=DEFAULT_EXCLUDE_FROM_RECORDER
+        ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+    }
+)
+
+ADD_DEVICE_TRACKER_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_VARIABLE_ID): cv.string,
+        vol.Optional(CONF_NAME): cv.string,
+        vol.Optional(CONF_ICON, default=DEFAULT_ICON): selector.IconSelector(
+            selector.IconSelectorConfig()
+        ),
+        vol.Required(ATTR_LATITUDE, default=""): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=-90,
+                max=90,
+                step="any",
+                unit_of_measurement="°",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Required(ATTR_LONGITUDE, default=""): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=-180,
+                max=180,
+                step="any",
+                unit_of_measurement="°",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(ATTR_LOCATION_NAME): cv.string,
+        vol.Optional(ATTR_GPS_ACCURACY): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=1000000,
+                step=1,
+                unit_of_measurement="m",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(ATTR_BATTERY_LEVEL): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=100,
+                step=1,
+                unit_of_measurement="%",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
+        vol.Optional(CONF_ATTRIBUTES): selector.ObjectSelector(
+            selector.ObjectSelectorConfig()
         ),
         vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
             selector.BooleanSelectorConfig()
@@ -408,6 +472,35 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="add_binary_sensor",
             data_schema=ADD_BINARY_SENSOR_SCHEMA,
+            errors=errors,
+            description_placeholders={
+                "component_config_url": COMPONENT_CONFIG_URL,
+            },
+        )
+
+    async def async_step_add_device_tracker(
+        self, user_input=None, errors=None, yaml_variable=False
+    ):
+        if user_input is not None:
+
+            try:
+                user_input.update({CONF_ENTITY_PLATFORM: Platform.DEVICE_TRACKER})
+                user_input.update({CONF_YAML_VARIABLE: yaml_variable})
+                info = await validate_sensor_input(self.hass, user_input)
+                _LOGGER.debug(f"[New Device Tracker] updated user_input: {user_input}")
+                return self.async_create_entry(
+                    title=info.get("title", ""), data=user_input
+                )
+            except Exception as err:
+                _LOGGER.exception(
+                    f"[config_flow async_step_add_device_tracker] Unexpected exception: {err}"
+                )
+                errors["base"] = "unknown"
+
+        # If there is no user input or there were errors, show the form again, including any errors that were found with the input.
+        return self.async_show_form(
+            step_id="add_device_tracker",
+            data_schema=ADD_DEVICE_TRACKER_SCHEMA,
             errors=errors,
             description_placeholders={
                 "component_config_url": COMPONENT_CONFIG_URL,
@@ -866,6 +959,169 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="binary_sensor_options",
             data_schema=BINARY_SENSOR_OPTIONS_SCHEMA,
+            errors=errors,
+            description_placeholders={
+                "component_config_url": COMPONENT_CONFIG_URL,
+                "disp_name": disp_name,
+            },
+        )
+
+    async def async_step_device_tracker_options(
+        self, user_input=None, errors=None
+    ) -> FlowResult:
+
+        if user_input is not None:
+            _LOGGER.debug(f"[Device Tracker Options] user_input: {user_input}")
+            for m in dict(self.config_entry.data).keys():
+                user_input.setdefault(m, self.config_entry.data[m])
+            user_input.update({CONF_UPDATED: True})
+            _LOGGER.debug(f"[Device Tracker Options] updated user_input: {user_input}")
+            self.config_entry.options = {}
+
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, data=user_input, options=self.config_entry.options
+            )
+            await self.hass.config_entries.async_reload(self.config_entry.entry_id)
+            return self.async_create_entry(title="", data=user_input)
+
+        DEVICE_TRACKER_OPTIONS_SCHEMA = vol.Schema(
+            {
+                vol.Required(
+                    ATTR_LATITUDE, default=self.config_entry.data.get(ATTR_LATITUDE)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=-90,
+                        max=90,
+                        step="any",
+                        unit_of_measurement="°",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+                vol.Required(
+                    ATTR_LONGITUDE, default=self.config_entry.data.get(ATTR_LONGITUDE)
+                ): selector.NumberSelector(
+                    selector.NumberSelectorConfig(
+                        min=-180,
+                        max=180,
+                        step="any",
+                        unit_of_measurement="°",
+                        mode=selector.NumberSelectorMode.BOX,
+                    )
+                ),
+            }
+        )
+        if self.config_entry.data.get(ATTR_LOCATION_NAME) is None:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(ATTR_LOCATION_NAME): cv.string,
+                }
+            )
+        else:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        ATTR_LOCATION_NAME,
+                        default=self.config_entry.data.get(ATTR_LOCATION_NAME),
+                    ): cv.string,
+                }
+            )
+        if self.config_entry.data.get(ATTR_GPS_ACCURACY) is None:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(ATTR_GPS_ACCURACY): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=1000000,
+                            step=1,
+                            unit_of_measurement="m",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+        else:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        ATTR_GPS_ACCURACY,
+                        default=self.config_entry.data.get(ATTR_GPS_ACCURACY),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=1000000,
+                            step=1,
+                            unit_of_measurement="m",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+        if self.config_entry.data.get(ATTR_BATTERY_LEVEL) is None:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(ATTR_BATTERY_LEVEL,): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=100,
+                            step=1,
+                            unit_of_measurement="%",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+        else:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        ATTR_BATTERY_LEVEL,
+                        default=self.config_entry.data.get(ATTR_BATTERY_LEVEL),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=100,
+                            step=1,
+                            unit_of_measurement="%",
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            )
+
+        DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+            {
+                vol.Optional(
+                    CONF_ATTRIBUTES, default=self.config_entry.data.get(CONF_ATTRIBUTES)
+                ): selector.ObjectSelector(selector.ObjectSelectorConfig()),
+                vol.Optional(
+                    CONF_RESTORE,
+                    default=self.config_entry.data.get(CONF_RESTORE, DEFAULT_RESTORE),
+                ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                vol.Optional(
+                    CONF_FORCE_UPDATE,
+                    default=self.config_entry.data.get(
+                        CONF_FORCE_UPDATE, DEFAULT_FORCE_UPDATE
+                    ),
+                ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                vol.Optional(
+                    CONF_EXCLUDE_FROM_RECORDER,
+                    default=self.config_entry.data.get(
+                        CONF_EXCLUDE_FROM_RECORDER, DEFAULT_EXCLUDE_FROM_RECORDER
+                    ),
+                ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+            }
+        )
+
+        if self.config_entry.data.get(CONF_NAME) is None or self.config_entry.data.get(
+            CONF_NAME
+        ) == self.config_entry.data.get(CONF_VARIABLE_ID):
+            disp_name = self.config_entry.data.get(CONF_VARIABLE_ID)
+        else:
+            disp_name = f"{self.config_entry.data.get(CONF_NAME)} ({self.config_entry.data.get(CONF_VARIABLE_ID)})"
+
+        return self.async_show_form(
+            step_id="device_tracker_options",
+            data_schema=DEVICE_TRACKER_OPTIONS_SCHEMA,
             errors=errors,
             description_placeholders={
                 "component_config_url": COMPONENT_CONFIG_URL,

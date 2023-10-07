@@ -1,4 +1,5 @@
 """Variable implementation for Home Assistant."""
+import copy
 import json
 import logging
 
@@ -27,6 +28,8 @@ from .const import (
     CONF_RESTORE,
     CONF_VALUE,
     CONF_VARIABLE_ID,
+    CONF_YAML_PRESENT,
+    CONF_YAML_VARIABLE,
     DEFAULT_REPLACE_ATTRIBUTES,
     DOMAIN,
     PLATFORMS,
@@ -115,7 +118,6 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
     variables = json.loads(json.dumps(config.get(DOMAIN, {})))
 
     for var, var_fields in variables.items():
-
         if var is not None:
             _LOGGER.debug(f"[YAML] variable_id: {var}")
             _LOGGER.debug(f"[YAML] var_fields: {var_fields}")
@@ -133,7 +135,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
                 entry.data.get(CONF_VARIABLE_ID)
                 for entry in hass.config_entries.async_entries(DOMAIN)
             }:
-                _LOGGER.warning(f"[YAML Import] Creating New Sensor Variable: {var}")
+                _LOGGER.warning(f"[YAML] Creating New Sensor Variable: {var}")
                 hass.async_create_task(
                     hass.config_entries.flow.async_init(
                         DOMAIN,
@@ -151,21 +153,22 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
                     )
                 )
             else:
-                _LOGGER.info(f"[YAML Update] Updating Existing Sensor Variable: {var}")
+                _LOGGER.info(f"[YAML] Updating Existing Sensor Variable: {var}")
 
                 entry_id = None
                 for ent in hass.config_entries.async_entries(DOMAIN):
                     if var == ent.data.get(CONF_VARIABLE_ID):
                         entry_id = ent.entry_id
                         break
-                _LOGGER.debug(f"[YAML Update] entry_id: {entry_id}")
+                # _LOGGER.debug(f"[YAML] entry_id: {entry_id}")
                 if entry_id:
                     entry = ent
-                    # _LOGGER.debug(f"[YAML Update] entry before: {entry.as_dict()}")
+                    # _LOGGER.debug(f"[YAML] entry before: {entry.as_dict()}")
 
                     for m in dict(entry.data).keys():
                         var_fields.setdefault(m, entry.data[m])
-                    _LOGGER.debug(f"[YAML Update] updated var_fields: {var_fields}")
+                    var_fields.update({CONF_YAML_PRESENT: True})
+                    # _LOGGER.debug(f"[YAML] Updated var_fields: {var_fields}")
                     entry.options = {}
                     hass.config_entries.async_update_entry(
                         entry, data=var_fields, options=entry.options
@@ -175,7 +178,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
 
                 else:
                     _LOGGER.error(
-                        f"YAML Update Error. Could not find entry_id for: {var}"
+                        f"[YAML] Update Error. Could not find entry_id for: {var}"
                     )
 
     return True
@@ -186,6 +189,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.options = {}
     # _LOGGER.debug(f"[init async_setup_entry] entry: {entry.data}")
+    if entry.data.get(CONF_YAML_VARIABLE, False) is True:
+        if entry.data.get(CONF_YAML_PRESENT, False) is False:
+            _LOGGER.warning(
+                f"[YAML] YAML Entry no longer exists, deleting entry in HA: {entry.data.get(CONF_VARIABLE_ID)}"
+            )
+            # _LOGGER.debug(f"[YAML] entry_id: {entry.entry_id}")
+            hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+            return False
+        else:
+            yaml_data = copy.deepcopy(dict(entry.data))
+            yaml_data.pop(CONF_YAML_PRESENT, None)
+            entry.options = {}
+            hass.config_entries.async_update_entry(
+                entry, data=yaml_data, options=entry.options
+            )
+
     hass.data.setdefault(DOMAIN, {})
     hass_data = dict(entry.data)
     hass.data[DOMAIN][entry.entry_id] = hass_data

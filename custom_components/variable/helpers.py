@@ -17,7 +17,6 @@ def to_num(s):
 
 
 def value_to_type(init_val, dest_type):  # noqa: C901
-
     if init_val is None or (
         isinstance(init_val, str)
         and init_val.lower() in ["", "none", "unknown", "unavailable"]
@@ -124,7 +123,7 @@ def value_to_type(init_val, dest_type):  # noqa: C901
             _LOGGER.debug(f"Invalid dest_type: {dest_type}, returning None")
             raise ValueError(f"Invalid dest_type: {dest_type}")
             return None
-    elif isinstance(init_val, datetime.date) and type(init_val) == datetime.date:
+    elif isinstance(init_val, datetime.date) and type(init_val) is datetime.date:
         # _LOGGER.debug("[value_to_type] Processing as date")
         if dest_type is None or dest_type == "string":
             _LOGGER.debug(
@@ -153,7 +152,7 @@ def value_to_type(init_val, dest_type):  # noqa: C901
             raise ValueError(f"Invalid dest_type: {dest_type}")
             return None
     elif (
-        isinstance(init_val, datetime.datetime) and type(init_val) == datetime.datetime
+        isinstance(init_val, datetime.datetime) and type(init_val) is datetime.datetime
     ):
         # _LOGGER.debug("[value_to_type] Processing as datetime")
         if dest_type is None or dest_type == "string":

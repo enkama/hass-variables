@@ -35,6 +35,7 @@ from .const import (
     CONF_VALUE,
     CONF_VALUE_TYPE,
     CONF_VARIABLE_ID,
+    CONF_YAML_PRESENT,
     CONF_YAML_VARIABLE,
     DEFAULT_EXCLUDE_FROM_RECORDER,
     DEFAULT_FORCE_UPDATE,
@@ -208,7 +209,6 @@ async def validate_sensor_input(hass: HomeAssistant, data: dict) -> dict[str, An
 
 
 class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-
     VERSION = 1
     # Connection classes in homeassistant/config_entries.py are now deprecated
 
@@ -226,6 +226,8 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input.update({CONF_ENTITY_PLATFORM: Platform.SENSOR})
             user_input.update({CONF_YAML_VARIABLE: yaml_variable})
+            if yaml_variable:
+                user_input.update({CONF_YAML_PRESENT: True})
             _LOGGER.debug(f"[New Sensor Variable] page_1_input: {user_input}")
             self.add_sensor_input = user_input
             return await self.async_step_sensor_page_2()
@@ -453,10 +455,11 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input=None, errors=None, yaml_variable=False
     ):
         if user_input is not None:
-
             try:
                 user_input.update({CONF_ENTITY_PLATFORM: Platform.BINARY_SENSOR})
                 user_input.update({CONF_YAML_VARIABLE: yaml_variable})
+                if yaml_variable:
+                    user_input.update({CONF_YAML_PRESENT: True})
                 info = await validate_sensor_input(self.hass, user_input)
                 _LOGGER.debug(f"[New Binary Sensor] updated user_input: {user_input}")
                 return self.async_create_entry(
@@ -482,10 +485,11 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self, user_input=None, errors=None, yaml_variable=False
     ):
         if user_input is not None:
-
             try:
                 user_input.update({CONF_ENTITY_PLATFORM: Platform.DEVICE_TRACKER})
                 user_input.update({CONF_YAML_VARIABLE: yaml_variable})
+                if yaml_variable:
+                    user_input.update({CONF_YAML_PRESENT: True})
                 info = await validate_sensor_input(self.hass, user_input)
                 _LOGGER.debug(f"[New Device Tracker] updated user_input: {user_input}")
                 return self.async_create_entry(
@@ -511,6 +515,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_import(self, import_config=None) -> FlowResult:
         """Import a config entry from configuration.yaml."""
 
+        # _LOGGER.debug(f"[async_step_import] import_config: {import_config}")
         return await self.async_step_add_sensor(
             user_input=import_config, yaml_variable=True
         )
@@ -548,13 +553,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             ):
                 return await new_func()
         else:
-            _LOGGER.debug("No Options for YAML Created Variables")
+            _LOGGER.debug("[YAML] No Options for YAML Created Variables")
             return self.async_abort(reason="yaml_variable")
 
     async def async_step_sensor_options(
         self, user_input=None, errors=None
     ) -> FlowResult:
-
         if user_input is not None:
             _LOGGER.debug(f"[Sensor Options Page 1] page_1_input: {user_input}")
             self.sensor_options_page_1 = user_input
@@ -772,7 +776,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 else:
                     SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
                         {
-                            vol.Optional(CONF_VALUE,): selector.DateTimeSelector(
+                            vol.Optional(
+                                CONF_VALUE,
+                            ): selector.DateTimeSelector(
                                 selector.DateTimeSelectorConfig()
                             )
                         }
@@ -885,7 +891,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_binary_sensor_options(
         self, user_input=None, errors=None
     ) -> FlowResult:
-
         if user_input is not None:
             _LOGGER.debug(f"[Binary Sensor Options] user_input: {user_input}")
             for m in dict(self.config_entry.data).keys():
@@ -969,7 +974,6 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
     async def async_step_device_tracker_options(
         self, user_input=None, errors=None
     ) -> FlowResult:
-
         if user_input is not None:
             _LOGGER.debug(f"[Device Tracker Options] user_input: {user_input}")
             for m in dict(self.config_entry.data).keys():
@@ -1059,7 +1063,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         if self.config_entry.data.get(ATTR_BATTERY_LEVEL) is None:
             DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
                 {
-                    vol.Optional(ATTR_BATTERY_LEVEL,): selector.NumberSelector(
+                    vol.Optional(
+                        ATTR_BATTERY_LEVEL,
+                    ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=0,
                             max=100,

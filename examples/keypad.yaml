@@ -21,7 +21,7 @@ script:
           entity_id: sensor.keypad
       - service: variable.update_sensor
         data:
-          value: 10
+          value: "10"
         target:
           entity_id: sensor.keypad_timer
       - service: automation.turn_on

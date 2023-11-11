@@ -2,7 +2,7 @@
 ### aka. `variable`
 
 <picture>
-  <img alt="Variable Logo" src="https://github.com/Wibias/hass-variables/raw/master/logo/icon.png">
+  <img alt="Variable Logo" src="https://github.com/enkama/hass-variables/raw/master/logo/icon.png">
 </picture>
 
 A Home Assistant Integration to declare and set/update variables.
@@ -16,7 +16,7 @@ Forked and updated from initial integration developed by [rogro82](https://githu
 
 ### HACS *(recommended)*
 1. Ensure that [HACS](https://hacs.xyz/) is installed
-2. [Click Here](https://my.home-assistant.io/redirect/hacs_repository/?owner=Wibias&repository=hass-variables) to directly open `Variables+History` in HACS **or**<br/>
+2. [Click Here](https://my.home-assistant.io/redirect/hacs_repository/?owner=enkama&repository=hass-variables) to directly open `Variables+History` in HACS **or**<br/>
   a. Navigate to HACS<br/>
   b. Click `+ Explore & Download Repositories`<br/>
   c. Find the `Variables+History` integration <br/>
@@ -322,7 +322,7 @@ Saved messages will survive restarts.
 
 BONUS - OPTIONAL TTS MESSAGE HISTORY
 
-You can find the full documentation on how to do this and adjust this to your needs in [here](https://github.com/Wibias/hass-variables/tree/master/examples/save-tts-message/tts.md).
+You can find the full documentation on how to do this and adjust this to your needs in [here](https://github.com/enkama/hass-variables/tree/master/examples/save-tts-message/tts.md).
 </details>
 
-#### More examples can be found in the [examples](https://github.com/Wibias/hass-variables/tree/master/examples) folder.
+#### More examples can be found in the [examples](https://github.com/enkama/hass-variables/tree/master/examples) folder.

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import datetime
 from enum import Enum
 import logging
+import re
 from typing import Any
 
 from homeassistant import config_entries
@@ -22,6 +24,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 import homeassistant.helpers.config_validation as cv
+import homeassistant.util.dt as dt_util
 from iso4217 import Currency
 import voluptuous as vol
 
@@ -31,6 +34,7 @@ from .const import (
     CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
     CONF_RESTORE,
+    CONF_TZOFFSET,
     CONF_UPDATED,
     CONF_VALUE,
     CONF_VALUE_TYPE,
@@ -256,9 +260,27 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input.update({CONF_VALUE: self.add_sensor_input.get(CONF_VALUE)})
                 yaml_value_type = self.yaml_import_get_value_type()
                 self.add_sensor_input.update({CONF_VALUE_TYPE: yaml_value_type})
+            if (
+                user_input.get(CONF_VALUE) is not None
+                and isinstance(user_input.get(CONF_VALUE), str)
+                and self.add_sensor_input.get(CONF_VALUE_TYPE) == "datetime"
+            ):
+                if (
+                    user_input.get(CONF_TZOFFSET) is not None
+                    and re.match(
+                        r"^[+-]?\d\d\:?\d\d\s*$", user_input.get(CONF_TZOFFSET)
+                    )
+                    is not None
+                ):
+                    val = user_input.get(CONF_VALUE) + user_input.get(CONF_TZOFFSET)
+                else:
+                    val = user_input.get(CONF_VALUE) + "+0000"
+            else:
+                val = user_input.get(CONF_VALUE)
+            _LOGGER.debug(f"[New Sensor Page 2] val: {val}")
             try:
                 newval = value_to_type(
-                    user_input.get(CONF_VALUE),
+                    val,
                     self.add_sensor_input.get(CONF_VALUE_TYPE),
                 )
             except ValueError:
@@ -381,11 +403,21 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif self.add_sensor_input.get(CONF_DEVICE_CLASS) in [
                 sensor.SensorDeviceClass.TIMESTAMP
             ]:
+                DEFAULT_TZOFFSET = datetime.datetime.now(
+                    dt_util.get_time_zone(self.hass.config.time_zone)
+                ).strftime("%z")
+                if DEFAULT_TZOFFSET is None:
+                    DEFAULT_TZOFFSET = "+0000"
+                _LOGGER.debug(f"DEFAULT_TZOFFSET: {DEFAULT_TZOFFSET}")
                 SENSOR_PAGE_2_SCHEMA = SENSOR_PAGE_2_SCHEMA.extend(
                     {
                         vol.Optional(CONF_VALUE): selector.DateTimeSelector(
                             selector.DateTimeSelectorConfig()
-                        )
+                        ),
+                        vol.Optional(
+                            CONF_TZOFFSET,
+                            default=DEFAULT_TZOFFSET,
+                        ): selector.TextSelector(selector.TextSelectorConfig()),
                     }
                 )
                 value_type = "datetime"
@@ -620,9 +652,27 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         errors = {}
         if user_input is not None:
             _LOGGER.debug(f"[Sensor Options Page 2] user_input: {user_input}")
+            if (
+                user_input.get(CONF_VALUE) is not None
+                and isinstance(user_input.get(CONF_VALUE), str)
+                and self.add_sensor_input.get(CONF_VALUE_TYPE) == "datetime"
+            ):
+                if (
+                    user_input.get(CONF_TZOFFSET) is not None
+                    and re.match(
+                        r"^[+-]?\d\d\:?\d\d\s*$", user_input.get(CONF_TZOFFSET)
+                    )
+                    is not None
+                ):
+                    val = user_input.get(CONF_VALUE) + user_input.get(CONF_TZOFFSET)
+                else:
+                    val = user_input.get(CONF_VALUE) + "+0000"
+            else:
+                val = user_input.get(CONF_VALUE)
+            _LOGGER.debug(f"[New Sensor Page 2] val: {val}")
             try:
                 newval = value_to_type(
-                    user_input.get(CONF_VALUE),
+                    val,
                     self.sensor_options_page_1.get(CONF_VALUE_TYPE),
                 )
             except ValueError:
@@ -763,24 +813,50 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             ]:
                 value_type = "datetime"
                 if val_default:
+                    _LOGGER.debug(f"val_default_value: {val_default_value}")
+                    dt = value_to_type(val_default_value, value_type)
+                    if dt is not None and isinstance(dt, datetime.datetime):
+                        tz_offset = dt.strftime("%z")
+                        if tz_offset is None:
+                            tz_offset = "+0000"
+                        ts_val = dt.strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        ts_val = None
+                        tz_offset = "+0000"
+                    _LOGGER.debug(f"ts_val: {ts_val}")
+                    _LOGGER.debug(f"tz_offset: {tz_offset}")
                     SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
                         {
                             vol.Optional(
                                 CONF_VALUE,
-                                default=val_default_value,
+                                default=ts_val,
                             ): selector.DateTimeSelector(
                                 selector.DateTimeSelectorConfig()
-                            )
+                            ),
+                            vol.Optional(
+                                CONF_TZOFFSET,
+                                default=tz_offset,
+                            ): selector.TextSelector(selector.TextSelectorConfig()),
                         }
                     )
                 else:
+                    DEFAULT_TZOFFSET = datetime.datetime.now(
+                        dt_util.get_time_zone(self.hass.config.time_zone)
+                    ).strftime("%z")
+                    if DEFAULT_TZOFFSET is None:
+                        DEFAULT_TZOFFSET = "+0000"
+                    _LOGGER.debug(f"DEFAULT_TZOFFSET: {DEFAULT_TZOFFSET}")
                     SENSOR_OPTIONS_PAGE_2_SCHEMA = SENSOR_OPTIONS_PAGE_2_SCHEMA.extend(
                         {
                             vol.Optional(
                                 CONF_VALUE,
                             ): selector.DateTimeSelector(
                                 selector.DateTimeSelectorConfig()
-                            )
+                            ),
+                            vol.Optional(
+                                CONF_TZOFFSET,
+                                default=DEFAULT_TZOFFSET,
+                            ): selector.TextSelector(selector.TextSelectorConfig()),
                         }
                     )
             else:

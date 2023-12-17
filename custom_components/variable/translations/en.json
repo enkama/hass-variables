@@ -25,6 +25,7 @@
         "title": "Variables+History - Sensor Page 2",
         "data": {
           "value": "Initial Value",
+          "tz_offset": "Initial Time Zone Offset",
           "attributes": "Initial Attributes",
           "state_class": "State Class",
           "unit_of_measurement": "Unit of Measurement"
@@ -87,6 +88,7 @@
         "title": "Variables+History - Sensor Page 2",
         "data": {
           "value": "Value (typically only useful if Restore on Restart is False)",
+          "tz_offset": "Time Zone Offset (typically only useful if Restore on Restart is False)",
           "attributes": "Attributes (typically only useful if Restore on Restart is False)",
           "state_class": "State Class",
           "unit_of_measurement": "Unit of Measurement"

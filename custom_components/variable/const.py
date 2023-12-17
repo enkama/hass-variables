@@ -37,3 +37,7 @@ ATTR_SUGGESTED_UNIT_OF_MEASUREMENT = "suggested_unit_of_measurement"
 ATTR_REPLACE_ATTRIBUTES = "replace_attributes"
 ATTR_VALUE = "value"
 ATTR_VARIABLE = "variable"
+
+SERVICE_UPDATE_SENSOR = "update_sensor"
+SERVICE_UPDATE_BINARY_SENSOR = "update_binary_sensor"
+SERVICE_UPDATE_DEVICE_TRACKER = "update_device_tracker"

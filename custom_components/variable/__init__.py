@@ -63,6 +63,7 @@ SERVICE_SET_ENTITY_LEGACY_SCHEMA = vol.Schema(
         ): cv.boolean,
     }
 )
+CONFIG_SCHEMA = cv.platform_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType):

@@ -4,7 +4,7 @@
     "after_dependencies": ["recorder"],
     "codeowners": [
         "@rogro82",
-        "@wibias",
+        "@enkama",
         "@Snuffy2"
     ],
     "config_flow": true,

@@ -9,6 +9,8 @@ A Home Assistant Integration to declare and set/update variables.
 
 Forked and updated from initial integration developed by [rogro82](https://github.com/rogro82)
 
+# Home Assistant versions starting with v2024.7.2 will prevent Variables+History versions earlier than v3.4.5 from working. Be sure to upgrade.
+
 ## Upgrading from v2 to v3
 **Existing variables will remain as yaml variables but instead of starting with `variable.`, they will now start with `sensor.` If you would like to manage the variable using the UI configuration, you will need to delete the entity from your yaml and recreate it in the UI. This is also the only change needed when migrating from rogro82's version to this one**
 

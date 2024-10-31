@@ -1,9 +1,7 @@
 # Variables+History
 ### aka. `variable`
 
-<picture>
   <img alt="Variable Logo" src="https://github.com/enkama/hass-variables/raw/master/logo/icon.png">
-</picture>
 
 A Home Assistant Integration to declare and set/update variables.
 

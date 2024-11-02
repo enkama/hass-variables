@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import datetime
-from enum import Enum
 import logging
 import re
+from enum import Enum
 from typing import Any
 
+import homeassistant.util.dt as dt_util
+import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.components import binary_sensor, sensor
 from homeassistant.components.device_tracker import ATTR_LOCATION_NAME
@@ -15,6 +17,7 @@ from homeassistant.const import (
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
     CONF_DEVICE_CLASS,
+    CONF_DEVICE_ID,
     CONF_ENTITY_ID,
     CONF_ICON,
     CONF_NAME,
@@ -25,10 +28,9 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers import config_validation as cv, entity_registry, selector
-import homeassistant.util.dt as dt_util
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry, selector
 from iso4217 import Currency
-import voluptuous as vol
 
 from .const import (
     ATTR_ATTRIBUTES,
@@ -36,6 +38,7 @@ from .const import (
     ATTR_REPLACE_ATTRIBUTES,
     ATTR_VALUE,
     CONF_ATTRIBUTES,
+    CONF_CLEAR_DEVICE_ID,
     CONF_ENTITY_PLATFORM,
     CONF_EXCLUDE_FROM_RECORDER,
     CONF_FORCE_UPDATE,
@@ -101,6 +104,9 @@ ADD_SENSOR_SCHEMA = vol.Schema(
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
         ),
+        vol.Optional(CONF_DEVICE_ID): selector.DeviceSelector(
+            selector.DeviceSelectorConfig()
+        ),
         vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
             selector.BooleanSelectorConfig()
         ),
@@ -139,6 +145,9 @@ ADD_BINARY_SENSOR_SCHEMA = vol.Schema(
                 custom_value=False,
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
+        ),
+        vol.Optional(CONF_DEVICE_ID): selector.DeviceSelector(
+            selector.DeviceSelectorConfig()
         ),
         vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
             selector.BooleanSelectorConfig()
@@ -198,6 +207,9 @@ ADD_DEVICE_TRACKER_SCHEMA = vol.Schema(
         ),
         vol.Optional(CONF_ATTRIBUTES): selector.ObjectSelector(
             selector.ObjectSelectorConfig()
+        ),
+        vol.Optional(CONF_DEVICE_ID): selector.DeviceSelector(
+            selector.DeviceSelectorConfig()
         ),
         vol.Optional(CONF_RESTORE, default=DEFAULT_RESTORE): selector.BooleanSelector(
             selector.BooleanSelectorConfig()
@@ -1126,7 +1138,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     def build_sensor_options_page_1(self):
-        return vol.Schema(
+        SENSOR_OPTIONS_PAGE_1_SCHEMA = vol.Schema(
             {
                 vol.Optional(
                     CONF_DEVICE_CLASS,
@@ -1139,6 +1151,32 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
+            }
+        )
+
+        if self.config_entry.data.get(CONF_DEVICE_ID, None):
+            SENSOR_OPTIONS_PAGE_1_SCHEMA = SENSOR_OPTIONS_PAGE_1_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_DEVICE_ID,
+                        default=self.config_entry.data.get(CONF_DEVICE_ID, None),
+                    ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
+                    vol.Optional(
+                        CONF_CLEAR_DEVICE_ID,
+                    ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                }
+            )
+        else:
+            SENSOR_OPTIONS_PAGE_1_SCHEMA = SENSOR_OPTIONS_PAGE_1_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_DEVICE_ID,
+                    ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
+                }
+            )
+
+        SENSOR_OPTIONS_PAGE_1_SCHEMA = SENSOR_OPTIONS_PAGE_1_SCHEMA.extend(
+            {
                 vol.Optional(
                     CONF_RESTORE,
                     default=self.config_entry.data.get(CONF_RESTORE, DEFAULT_RESTORE),
@@ -1157,6 +1195,8 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
             }
         )
+
+        return SENSOR_OPTIONS_PAGE_1_SCHEMA
 
     async def async_step_sensor_options_page_2(self, user_input=None):
         errors = {}
@@ -1198,6 +1238,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     user_input.update(self.sensor_options_page_1)
                 for m in dict(self.config_entry.data).keys():
                     user_input.setdefault(m, self.config_entry.data[m])
+                if user_input.get(CONF_CLEAR_DEVICE_ID, False):
+                    user_input.pop(CONF_DEVICE_ID, None)
+                user_input.pop(CONF_CLEAR_DEVICE_ID, None)
                 if user_input is not None:
                     for k, v in list(user_input.items()):
                         if v is None or (isinstance(v, str) and v.lower() == "none"):
@@ -1488,6 +1531,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.debug(f"[Binary Sensor Options] user_input: {user_input}")
             for m in dict(self.config_entry.data).keys():
                 user_input.setdefault(m, self.config_entry.data[m])
+            if user_input.get(CONF_CLEAR_DEVICE_ID, False):
+                user_input.pop(CONF_DEVICE_ID, None)
+            user_input.pop(CONF_CLEAR_DEVICE_ID, None)
             user_input.update({CONF_UPDATED: True})
             _LOGGER.debug(f"[Binary Sensor Options] updated user_input: {user_input}")
 
@@ -1531,6 +1577,32 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 ),
+            }
+        )
+
+        if self.config_entry.data.get(CONF_DEVICE_ID, None):
+            BINARY_SENSOR_OPTIONS_SCHEMA = BINARY_SENSOR_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_DEVICE_ID,
+                        default=self.config_entry.data.get(CONF_DEVICE_ID, None),
+                    ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
+                    vol.Optional(
+                        CONF_CLEAR_DEVICE_ID,
+                    ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                }
+            )
+        else:
+            BINARY_SENSOR_OPTIONS_SCHEMA = BINARY_SENSOR_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_DEVICE_ID,
+                    ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
+                }
+            )
+
+        BINARY_SENSOR_OPTIONS_SCHEMA = BINARY_SENSOR_OPTIONS_SCHEMA.extend(
+            {
                 vol.Optional(
                     CONF_RESTORE,
                     default=self.config_entry.data.get(CONF_RESTORE, DEFAULT_RESTORE),
@@ -1574,6 +1646,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.debug(f"[Device Tracker Options] user_input: {user_input}")
             for m in dict(self.config_entry.data).keys():
                 user_input.setdefault(m, self.config_entry.data[m])
+            if user_input.get(CONF_CLEAR_DEVICE_ID, False):
+                user_input.pop(CONF_DEVICE_ID, None)
+            user_input.pop(CONF_CLEAR_DEVICE_ID, None)
             user_input.update({CONF_UPDATED: True})
             _LOGGER.debug(f"[Device Tracker Options] updated user_input: {user_input}")
 
@@ -1696,6 +1771,32 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_ATTRIBUTES, default=self.config_entry.data.get(CONF_ATTRIBUTES)
                 ): selector.ObjectSelector(selector.ObjectSelectorConfig()),
+            }
+        )
+
+        if self.config_entry.data.get(CONF_DEVICE_ID, None):
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_DEVICE_ID,
+                        default=self.config_entry.data.get(CONF_DEVICE_ID, None),
+                    ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
+                    vol.Optional(
+                        CONF_CLEAR_DEVICE_ID,
+                    ): selector.BooleanSelector(selector.BooleanSelectorConfig()),
+                }
+            )
+        else:
+            DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+                {
+                    vol.Optional(
+                        CONF_DEVICE_ID,
+                    ): selector.DeviceSelector(selector.DeviceSelectorConfig()),
+                }
+            )
+
+        DEVICE_TRACKER_OPTIONS_SCHEMA = DEVICE_TRACKER_OPTIONS_SCHEMA.extend(
+            {
                 vol.Optional(
                     CONF_RESTORE,
                     default=self.config_entry.data.get(CONF_RESTORE, DEFAULT_RESTORE),

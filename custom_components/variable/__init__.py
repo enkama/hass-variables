@@ -5,8 +5,10 @@ import copy
 import json
 import logging
 
+import voluptuous as vol
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
+    CONF_DEVICE_ID,
     CONF_ENTITY_ID,
     CONF_FRIENDLY_NAME,
     CONF_ICON,
@@ -17,9 +19,11 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.device import (
+    async_remove_stale_devices_links_keep_current_device,
+)
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.helpers.typing import ConfigType
-import voluptuous as vol
 
 from .const import (
     ATTR_ATTRIBUTES,
@@ -116,6 +120,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
             return
         _LOGGER.debug(f" reload_config: {reload_config}")
         await _async_process_yaml(hass, reload_config)
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_SET_VARIABLE_LEGACY,
@@ -219,7 +224,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             yaml_data = copy.deepcopy(dict(entry.data))
             yaml_data.pop(CONF_YAML_PRESENT, None)
             hass.config_entries.async_update_entry(entry, data=yaml_data, options={})
-
+    async_remove_stale_devices_links_keep_current_device(
+        hass,
+        entry.entry_id,
+        entry.data.get(CONF_DEVICE_ID),
+    )
     hass.data.setdefault(DOMAIN, {})
     hass_data = dict(entry.data)
     hass.data[DOMAIN][entry.entry_id] = hass_data

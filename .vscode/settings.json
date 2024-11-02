@@ -3,5 +3,8 @@
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
     "files.trimTrailingWhitespace": true,
-    "git.ignoreLimitWarning": true
+    "git.ignoreLimitWarning": true,
+    "files.associations": {
+        "*.yaml": "home-assistant"
+    }
 }

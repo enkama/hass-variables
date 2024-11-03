@@ -8,6 +8,7 @@ import logging
 import voluptuous as vol
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
+    CONF_DEVICE,
     CONF_DEVICE_ID,
     CONF_ENTITY_ID,
     CONF_FRIENDLY_NAME,
@@ -44,6 +45,7 @@ from .const import (
     PLATFORMS,
     SERVICE_UPDATE_SENSOR,
 )
+from .device import create_device, remove_device
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -236,6 +238,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await hass.config_entries.async_forward_entry_setups(
             entry, [hass_data.get(CONF_ENTITY_PLATFORM)]
         )
+    elif hass_data.get(CONF_ENTITY_PLATFORM) == CONF_DEVICE:
+        await create_device(hass, entry)
     return True
 
 
@@ -243,12 +247,15 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
 
     _LOGGER.info(f"Unloading: {entry.data}")
+    # _LOGGER.debug(f"[init async_unload_entry] entry: {entry}")
     hass_data = dict(entry.data)
     unload_ok = False
     if hass_data.get(CONF_ENTITY_PLATFORM) in PLATFORMS:
         unload_ok = await hass.config_entries.async_unload_platforms(
             entry, [hass_data.get(CONF_ENTITY_PLATFORM)]
         )
+    elif hass_data.get(CONF_ENTITY_PLATFORM) == CONF_DEVICE:
+        unload_ok = await remove_device(hass, entry)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 

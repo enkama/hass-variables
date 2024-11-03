@@ -5,7 +5,8 @@
         "menu_options": {
           "add_sensor": "Create a Sensor Variable",
           "add_binary_sensor": "Create a Binary Sensor Variable",
-          "add_device_tracker": "Create a Device Tracker (GPS) Variable"
+          "add_device_tracker": "Create a Device Tracker (GPS) Variable",
+          "add_device": "Create a Device"
         }
       },
       "add_sensor": {
@@ -67,10 +68,25 @@
           "exclude_from_recorder": "Exclude from Recorder"
         },
         "description": "Create a new Device Tracker (GPS) Variable"
+      },
+      "add_device": {
+        "title": "Variables+History - Device",
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]",
+          "configuration_url": "Configuration URL",
+          "manufacturer": "Manufacturer",
+          "hw_version": "Hardware Version",
+          "model": "Model",
+          "model_id": "Model ID",
+          "serial_number": "Serial Number",
+          "sw_version": "Software Version"
+        },
+        "description": "Create a new Device"
       }
     },
     "error": {
       "invalid_value_type": "The value entered is not compatible with the selected device_class",
+      "invalid_url": "Invalid URL",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   },
@@ -178,6 +194,7 @@
     },
     "error": {
       "invalid_value_type": "The value entered is not compatible with the selected device_class",
+      "invalid_url": "Invalid URL",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     }
   },

@@ -87,7 +87,7 @@ async def async_setup_entry(
         {
             vol.Optional(ATTR_LATITUDE): cv.latitude,
             vol.Optional(ATTR_LONGITUDE): cv.longitude,
-            vol.Optional(ATTR_LOCATION_NAME): cv.string,
+            vol.Optional(ATTR_LOCATION_NAME): vol.Any(cv.string, None),
             vol.Optional(ATTR_DELETE_LOCATION_NAME): cv.boolean,
             vol.Optional(ATTR_GPS_ACCURACY): cv.positive_int,
             vol.Optional(ATTR_BATTERY_LEVEL): vol.All(

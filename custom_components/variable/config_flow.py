@@ -646,10 +646,6 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class VariableOptionsFlowHandler(config_entries.OptionsFlow):
     """Options for the component."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Init object."""
-        self.config_entry = config_entry
-
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:

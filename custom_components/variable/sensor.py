@@ -58,7 +58,7 @@ from .const import (
     DEFAULT_RESTORE,
     DOMAIN,
 )
-from .helpers import value_to_type
+from .helpers import merge_attribute_dict, value_to_type
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -360,10 +360,17 @@ class Variable(RestoreSensor):
                     f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
                 )
                 extra_attributes = self._update_attr_settings(attributes)
-                if updated_attributes is not None:
-                    updated_attributes.update(extra_attributes)
-                else:
-                    updated_attributes = extra_attributes
+                if extra_attributes is not None:
+                    try:
+                        updated_attributes = merge_attribute_dict(
+                            updated_attributes, extra_attributes
+                        )
+                    except ValueError as err:
+                        _LOGGER.error(
+                            "(%s) AttributeError: %s",
+                            self._attr_name,
+                            err,
+                        )
             else:
                 _LOGGER.error(
                     f"({self._attr_name}) AttributeError: Attributes must be a dictionary: {attributes}"

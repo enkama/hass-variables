@@ -104,7 +104,7 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         SERVICE_UPDATE_VARIABLE,
         {
-            vol.Optional(ATTR_VALUE): cv.string,
+            vol.Optional(ATTR_VALUE): cv.match_all,
             vol.Optional(ATTR_ATTRIBUTES): dict,
             vol.Optional(
                 ATTR_REPLACE_ATTRIBUTES, default=DEFAULT_REPLACE_ATTRIBUTES

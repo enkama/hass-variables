@@ -1,7 +1,7 @@
 import copy
 import logging
 from collections.abc import MutableMapping
-from typing import Any, cast
+from typing import cast
 
 import homeassistant.helpers.entity_registry as er
 import voluptuous as vol

@@ -13,10 +13,20 @@ Files changed
 - `custom_components/variable/sensor.py`
 - `custom_components/variable/__init__.py`
 - `custom_components/variable/manifest.json`
+ - `custom_components/variable/config_flow.py`
 
 Why
 
 Home Assistant stubs declare some properties as `cached_property` / `final`. These changes avoid CI failures while preserving runtime behavior.
+
+Config flow & options fixes
+
+- Normalize and guard `user_input` in options flow steps so `.get()`/`.update()` are safe for type checkers.
+- Make iso4217 an optional import and guard iteration over currencies.
+- Replace direct references to `sensor.DEVICE_CLASS_UNITS` with a safe getattr fallback.
+- Coerce `description_placeholders` values to `str()` so they match Home Assistant's expected `Mapping[str, str]`.
+- Initialize `entity_id`/`state` locals before use and guard `state` accesses.
+- Add an AwesomeVersion/HAVERSION guard so older HA versions keep `config_entry` on the OptionsFlow handler (Closes #140).
 
 Notes
 

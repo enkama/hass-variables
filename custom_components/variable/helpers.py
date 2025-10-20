@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import MutableMapping
 import copy
 import datetime
 import logging
+from collections.abc import MutableMapping
+from typing import Any
 
 import homeassistant.util.dt as dt_util
 
@@ -59,7 +60,7 @@ def set_nested_attribute(target: MutableMapping, path: str, value) -> None:
     if not tokens:
         raise ValueError("Attribute path cannot be empty")
 
-    current: MutableMapping | list = target
+    current = target
     for idx, token in enumerate(tokens):
         is_last = idx == len(tokens) - 1
         if isinstance(token, str):
@@ -71,7 +72,7 @@ def set_nested_attribute(target: MutableMapping, path: str, value) -> None:
                 current[token] = copy.deepcopy(value)
             else:
                 next_token = tokens[idx + 1]
-                existing: list | MutableMapping | None = current.get(token)
+                existing = current.get(token)
                 if isinstance(next_token, int):
                     if not isinstance(existing, list):
                         existing = []
@@ -91,7 +92,9 @@ def set_nested_attribute(target: MutableMapping, path: str, value) -> None:
                     current.append(None)
                 current[token] = copy.deepcopy(value)
             else:
-                next_container = [] if isinstance(next_token, int) else {}
+                next_container: list[Any] | MutableMapping[str, Any] = (
+                    [] if isinstance(next_token, int) else {}
+                )
                 while len(current) <= token:
                     current.append(copy.deepcopy(next_container))
                 if isinstance(next_token, int):

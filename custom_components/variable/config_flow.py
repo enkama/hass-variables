@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import datetime
-from enum import Enum
 import logging
 import re
+from enum import Enum
 from typing import Any
 
+import voluptuous as vol
 from awesomeversion import AwesomeVersion
 from homeassistant import config_entries
+import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor, sensor
 from homeassistant.components.device_tracker.const import ATTR_LOCATION_NAME
+from homeassistant.const import __version__ as HAVERSION
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_CONFIGURATION_URL,
@@ -32,12 +35,10 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
     Platform,
-    __version__ as HAVERSION,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv, entity_registry, selector
-import homeassistant.util.dt as dt_util
-import voluptuous as vol
+from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry, selector
 
 try:
     # iso4217 is an optional dependency; import if available
@@ -290,7 +291,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
     VERSION = 1
     # Connection classes in homeassistant/config_entries.py are now deprecated
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input: dict | None = None) -> Any:
         """Handle the initial step."""
         platforms_w_device: list = PLATFORMS + [CONF_DEVICE]
         return self.async_show_menu(
@@ -299,8 +300,8 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
         )
 
     async def async_step_add_sensor(
-        self, user_input=None, errors=None, yaml_variable=False
-    ):
+        self, user_input: dict | None = None, errors: dict | None = None, yaml_variable: bool = False
+    ) -> Any:
         errors = {} if errors is None else errors
         if user_input is not None:
             user_input.update({CONF_ENTITY_PLATFORM: Platform.SENSOR})
@@ -321,7 +322,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             },
         )
 
-    async def async_step_sensor_page_2(self, user_input=None, errors=None):
+    async def async_step_sensor_page_2(self, user_input: dict | None = None, errors: dict | None = None) -> Any:
         errors = {} if errors is None else errors
         if (
             user_input is not None
@@ -442,11 +443,27 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
         SENSOR_PAGE_2_SCHEMA = vol.Schema({})
         if (
             self.add_sensor_input.get(CONF_DEVICE_CLASS) is not None
-            and self.add_sensor_input.get(CONF_DEVICE_CLASS).lower() != "none"
+            and str(self.add_sensor_input.get(CONF_DEVICE_CLASS)).lower() != "none"
         ):
-            for el in sensor.DEVICE_CLASS_STATE_CLASSES.get(
-                self.add_sensor_input.get(CONF_DEVICE_CLASS), Enum
-            ):
+            # Normalize the possibly-string device class back to the SensorDeviceClass
+            device_class_key = self.add_sensor_input.get(CONF_DEVICE_CLASS)
+            normalized_device_class = None
+            if isinstance(device_class_key, sensor.SensorDeviceClass):
+                normalized_device_class = device_class_key
+            elif isinstance(device_class_key, str):
+                # Try to match by enum name or enum value string
+                for m in sensor.SensorDeviceClass:
+                    if str(m.value) == device_class_key or m.name == device_class_key:
+                        normalized_device_class = m
+                        break
+
+            if normalized_device_class is None:
+                classes = []
+            else:
+                classes = sensor.DEVICE_CLASS_STATE_CLASSES.get(
+                    normalized_device_class, []
+                )
+            for el in classes:
                 SENSOR_STATE_CLASS_SELECT_LIST.append(
                     selector.SelectOptionDict(label=str(el.name), value=str(el.value))
                 )
@@ -566,8 +583,8 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
         return SENSOR_PAGE_2_SCHEMA
 
     async def async_step_add_binary_sensor(
-        self, user_input=None, errors=None, yaml_variable=False
-    ):
+        self, user_input: dict | None = None, errors: dict | None = None, yaml_variable: bool = False
+    ) -> Any:
         errors = {} if errors is None else errors
         if user_input is not None:
             try:
@@ -597,8 +614,8 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
         )
 
     async def async_step_add_device_tracker(
-        self, user_input=None, errors=None, yaml_variable=False
-    ):
+        self, user_input: dict | None = None, errors: dict | None = None, yaml_variable: bool = False
+    ) -> Any:
         errors = {} if errors is None else errors
         if user_input is not None:
             try:
@@ -628,8 +645,8 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
         )
 
     async def async_step_add_device(
-        self, user_input=None, errors=None, yaml_variable=False
-    ):
+        self, user_input: dict | None = None, errors: dict | None = None, yaml_variable: bool = False
+    ) -> Any:
         errors = {} if errors is None else errors
         if user_input is not None:
             try:
@@ -664,7 +681,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
         )
 
     # this is run to import the configuration.yaml parameters\
-    async def async_step_import(self, import_config=None):
+    async def async_step_import(self, import_config: dict | None = None) -> Any:
         """Import a config entry from configuration.yaml."""
 
         # _LOGGER.debug(f"[async_step_import] import_config: {import_config}")
@@ -718,7 +735,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             return await self.async_step_device_options()
         return False
 
-    async def async_step_change_sensor_value(self, user_input=None, errors=None):
+    async def async_step_change_sensor_value(self, user_input: dict | None = None, errors: dict | None = None) -> Any:
         # user_input can be None; normalize to an empty dict for safe .get()/.update()
         user_input = user_input or {}
         errors = {} if errors is None else errors
@@ -905,7 +922,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             )
         return CHANGE_VARIABLE_VALUE_SCHEMA
 
-    async def async_step_change_binary_sensor_value(self, user_input=None, errors=None):
+    async def async_step_change_binary_sensor_value(self, user_input: dict | None = None, errors: dict | None = None) -> Any:
         user_input = user_input or {}
         errors = {} if errors is None else errors
         ent = entity_registry.async_entries_for_config_entry(
@@ -1003,8 +1020,8 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         return CHANGE_VARIABLE_VALUE_SCHEMA
 
     async def async_step_change_device_tracker_value(
-        self, user_input=None, errors=None
-    ):
+        self, user_input: dict | None = None, errors: dict | None = None
+    ) -> Any:
         user_input = user_input or {}
         errors = {} if errors is None else errors
         ent = entity_registry.async_entries_for_config_entry(

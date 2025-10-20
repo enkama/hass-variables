@@ -3,8 +3,8 @@ import logging
 from collections.abc import MutableMapping
 from typing import final, Optional, cast
 
-import homeassistant.helpers.entity_registry as er
 import voluptuous as vol
+import homeassistant.helpers.entity_registry as er
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.components.device_tracker.legacy import PLATFORM_SCHEMA
 from homeassistant.components.device_tracker.const import (
@@ -13,6 +13,7 @@ from homeassistant.components.device_tracker.const import (
     SourceType,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_FRIENDLY_NAME,
@@ -26,7 +27,6 @@ from homeassistant.const import (
     MATCH_ALL,
     Platform,
 )
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.device import async_device_info_to_link_from_device_id

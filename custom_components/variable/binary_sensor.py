@@ -3,10 +3,11 @@ import logging
 from collections.abc import MutableMapping
 from typing import cast
 
-import homeassistant.helpers.entity_registry as er
 import voluptuous as vol
+import homeassistant.helpers.entity_registry as er
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -19,7 +20,6 @@ from homeassistant.const import (
     STATE_ON,
     Platform,
 )
-from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_platform, selector
 from homeassistant.helpers.device import async_device_info_to_link_from_device_id

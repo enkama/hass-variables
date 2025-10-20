@@ -29,7 +29,7 @@ def _parse_attribute_path(path: str) -> list:
             closing = path.find("]", index)
             if closing == -1:
                 raise ValueError(f"Invalid attribute path: {path}")
-            index_str = path[index + 1 : closing]
+            index_str = path[index + 1:closing]
             if not index_str.isdigit():
                 raise ValueError(f"Invalid list index in attribute path: {path}")
             tokens.append(int(index_str))

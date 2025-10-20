@@ -5,14 +5,14 @@ import logging
 import re
 from enum import Enum
 from typing import Any
-from awesomeversion import AwesomeVersion
-from homeassistant.const import __version__ as HAVERSION
 
-import homeassistant.util.dt as dt_util
 import voluptuous as vol
+from awesomeversion import AwesomeVersion
 from homeassistant import config_entries
+import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor, sensor
 from homeassistant.components.device_tracker.const import ATTR_LOCATION_NAME
+from homeassistant.const import __version__ as HAVERSION
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_CONFIGURATION_URL,
@@ -287,7 +287,7 @@ async def validate_sensor_input(hass: HomeAssistant, data: dict) -> dict[str, An
         return {"title": data.get(CONF_VARIABLE_ID, "")}
 
 
-class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     VERSION = 1
     # Connection classes in homeassistant/config_entries.py are now deprecated
 

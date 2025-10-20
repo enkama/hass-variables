@@ -648,16 +648,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Init object."""
-        # Do not set `self.config_entry` directly (deprecated). Store the
-        # entry_id and resolve the live ConfigEntry via `hass.config_entries` to
-        # avoid the deprecation warning in Home Assistant 2025.12.
-        self._config_entry_id = config_entry.entry_id
-
-    @property
-    def config_entry(self) -> config_entries.ConfigEntry | None:
-        """Return the live ConfigEntry for this options flow."""
-        # `self.hass` is provided by the base OptionsFlow implementation.
-        return self.hass.config_entries.async_get_entry(self._config_entry_id)
+        self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None

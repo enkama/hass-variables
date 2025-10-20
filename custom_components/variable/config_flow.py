@@ -5,12 +5,14 @@ import logging
 import re
 from enum import Enum
 from typing import Any
+from awesomeversion import AwesomeVersion
+from homeassistant.const import __version__ as HAVERSION  # type: ignore
 
 import homeassistant.util.dt as dt_util
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.components import binary_sensor, sensor
-from homeassistant.components.device_tracker import ATTR_LOCATION_NAME
+from homeassistant.components.device_tracker.const import ATTR_LOCATION_NAME
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_CONFIGURATION_URL,
@@ -38,7 +40,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry, selector
-from iso4217 import Currency
+try:
+    # iso4217 is an optional dependency; import if available
+    from iso4217 import Currency  # type: ignore
+except Exception:  # pragma: no cover - optional import
+    # Make Currency an empty list to keep code paths that iterate over it safe
+    Currency = []  # type: ignore
 
 from .const import (
     ATTR_ATTRIBUTES,
@@ -259,7 +266,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
     # Connection classes in homeassistant/config_entries.py are now deprecated
 
-    async def async_step_user(self, user_input=None) -> FlowResult:
+    async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         platforms_w_device: list = PLATFORMS + [CONF_DEVICE]
         return self.async_show_menu(
@@ -304,6 +311,8 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 user_input.update({CONF_VALUE: self.add_sensor_input.get(CONF_VALUE)})
                 yaml_value_type = self.yaml_import_get_value_type()
                 self.add_sensor_input.update({CONF_VALUE_TYPE: yaml_value_type})
+            # normalize user_input to dict to make .get/.update safe for type checkers
+            user_input = user_input or {}
             if (
                 user_input.get(CONF_VALUE) is not None
                 and isinstance(user_input.get(CONF_VALUE), str)
@@ -312,13 +321,13 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if (
                     user_input.get(CONF_TZOFFSET) is not None
                     and re.match(
-                        r"^[+-]?\d\d\:?\d\d\s*$", user_input.get(CONF_TZOFFSET)
+                        r"^[+-]?\d\d\:?\d\d\s*$", str(user_input.get(CONF_TZOFFSET))
                     )
                     is not None
                 ):
-                    val = user_input.get(CONF_VALUE) + user_input.get(CONF_TZOFFSET)
+                    val = str(user_input.get(CONF_VALUE)) + str(user_input.get(CONF_TZOFFSET))
                 else:
-                    val = user_input.get(CONF_VALUE) + "+0000"
+                    val = str(user_input.get(CONF_VALUE)) + "+0000"
             else:
                 val = user_input.get(CONF_VALUE)
             _LOGGER.debug(f"[New Sensor Page 2] val: {val}")
@@ -364,9 +373,9 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=SENSOR_PAGE_2_SCHEMA,
             errors=errors,
             description_placeholders={
-                "device_class": self.add_sensor_input.get(CONF_DEVICE_CLASS, "None"),
-                "disp_name": disp_name,
-                "value_type": self.add_sensor_input.get(CONF_VALUE_TYPE, "None"),
+                "device_class": str(self.add_sensor_input.get(CONF_DEVICE_CLASS, "None")),
+                "disp_name": str(disp_name),
+                "value_type": str(self.add_sensor_input.get(CONF_VALUE_TYPE, "None")),
             },
         )
 
@@ -417,16 +426,17 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self.add_sensor_input.get(CONF_DEVICE_CLASS)
                 == sensor.SensorDeviceClass.MONETARY
             ):
-                for el in Currency:
-                    if el.code not in ["XTS", "XXX"]:
-                        SENSOR_UNITS_SELECT_LIST.append(
-                            selector.SelectOptionDict(
-                                label=f"{el.currency_name} [{el.code}]",
-                                value=str(el.code),
+                if Currency is not None:
+                    for el in Currency:
+                        if el.code not in ["XTS", "XXX"]:
+                            SENSOR_UNITS_SELECT_LIST.append(
+                                selector.SelectOptionDict(
+                                    label=f"{el.currency_name} [{el.code}]",
+                                    value=str(el.code),
+                                )
                             )
-                        )
             else:
-                for el in sensor.DEVICE_CLASS_UNITS.get(
+                for el in getattr(sensor, "DEVICE_CLASS_UNITS", {}).get(
                     self.add_sensor_input.get(CONF_DEVICE_CLASS), []
                 ):
                     if el is not None and el != "None":
@@ -626,7 +636,7 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     # this is run to import the configuration.yaml parameters\
-    async def async_step_import(self, import_config=None) -> FlowResult:
+    async def async_step_import(self, import_config=None):
         """Import a config entry from configuration.yaml."""
 
         # _LOGGER.debug(f"[async_step_import] import_config: {import_config}")
@@ -647,12 +657,23 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
     """Options for the component."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        """Init object."""
-        self.config_entry = config_entry
+        """Init object.
+
+        Older Home Assistant versions expect the OptionsFlow handler to keep a
+        reference to the ConfigEntry on the instance. Recent HA versions handle
+        this differently, so only set it for older versions (issue #140).
+        """
+        try:
+            if AwesomeVersion(HAVERSION) < "2024.11.99":
+                # Keep the config_entry reference for older HA versions
+                self.config_entry = config_entry
+        except Exception:
+            # If version parsing fails, be conservative and keep the reference
+            self.config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ):
         """Manage the options."""
 
         if self.config_entry.data.get(CONF_YAML_VARIABLE):
@@ -660,12 +681,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             return self.async_abort(reason="yaml_variable")
 
         if self.config_entry.data.get(CONF_ENTITY_PLATFORM) in PLATFORMS:
-            change_value = (
-                "change_" + self.config_entry.data.get(CONF_ENTITY_PLATFORM) + "_value"
-            )
-            change_options = (
-                self.config_entry.data.get(CONF_ENTITY_PLATFORM) + "_options"
-            )
+            platform = str(self.config_entry.data.get(CONF_ENTITY_PLATFORM, ""))
+            change_value = "change_" + platform + "_value"
+            change_options = platform + "_options"
             return self.async_show_menu(
                 step_id="init",
                 menu_options=[change_value, change_options],
@@ -676,11 +694,15 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_change_sensor_value(
         self, user_input=None, errors=None
-    ) -> FlowResult:
+    ):
+        # user_input can be None; normalize to an empty dict for safe .get()/.update()
+        user_input = user_input or {}
         errors = {} if errors is None else errors
         ent = entity_registry.async_entries_for_config_entry(
             entity_registry.async_get(self.hass), self.config_entry.entry_id
         )
+        entity_id = None
+        state = None
         if len(ent) > 0:
             entity_id = ent[0].entity_id
             state = self.hass.states.get(entity_id)
@@ -688,7 +710,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.error("Unable to load Variable to Change Value")
         _LOGGER.debug(f"[Change Sensor Value] entity_id: {entity_id}")
         _LOGGER.debug(f"[Change Sensor Value] state: {state}")
-        if user_input is not None:
+        if user_input:
             _LOGGER.debug(f"[Change Sensor Value] user_input: {user_input}")
             if (
                 user_input.get(CONF_VALUE) is not None
@@ -698,13 +720,13 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 if (
                     user_input.get(CONF_TZOFFSET) is not None
                     and re.match(
-                        r"^[+-]?\d\d\:?\d\d\s*$", user_input.get(CONF_TZOFFSET)
+                        r"^[+-]?\d\d\:?\d\d\s*$", str(user_input.get(CONF_TZOFFSET))
                     )
                     is not None
                 ):
-                    val = user_input.get(CONF_VALUE) + user_input.get(CONF_TZOFFSET)
+                    val = str(user_input.get(CONF_VALUE)) + str(user_input.get(CONF_TZOFFSET))
                 else:
-                    val = user_input.get(CONF_VALUE) + "+0000"
+                    val = str(user_input.get(CONF_VALUE)) + "+0000"
             else:
                 val = user_input.get(CONF_VALUE)
             _LOGGER.debug(f"[Change Sensor Value] val: {val}")
@@ -748,9 +770,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="change_sensor_value",
             data_schema=CHANGE_SENSOR_VALUE_SCHEMA,
             errors=errors,
-            description_placeholders={
-                "disp_name": disp_name,
-            },
+            description_placeholders={"disp_name": str(disp_name)},
         )
 
     def build_change_sensor_value(self, state):
@@ -859,13 +879,14 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             )
         return CHANGE_VARIABLE_VALUE_SCHEMA
 
-    async def async_step_change_binary_sensor_value(
-        self, user_input=None, errors=None
-    ) -> FlowResult:
+    async def async_step_change_binary_sensor_value(self, user_input=None, errors=None):
+        user_input = user_input or {}
         errors = {} if errors is None else errors
         ent = entity_registry.async_entries_for_config_entry(
             entity_registry.async_get(self.hass), self.config_entry.entry_id
         )
+        entity_id = None
+        state = None
         if len(ent) > 0:
             entity_id = ent[0].entity_id
             state = self.hass.states.get(entity_id)
@@ -873,7 +894,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.error("Unable to load Variable to Change Value")
         _LOGGER.debug(f"[Change Binary Sensor Value] entity_id: {entity_id}")
         _LOGGER.debug(f"[Change Binary Sensor Value] state: {state}")
-        if user_input is not None:
+        if user_input:
             _LOGGER.debug(f"[Change Binary Sensor Value] user_input: {user_input}")
 
             if not errors:
@@ -906,9 +927,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="change_binary_sensor_value",
             data_schema=CHANGE_BINARY_SENSOR_VALUE_SCHEMA,
             errors=errors,
-            description_placeholders={
-                "disp_name": disp_name,
-            },
+            description_placeholders={"disp_name": str(disp_name)},
         )
 
     def build_change_binary_sensor_value(self, state):
@@ -957,13 +976,14 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             )
         return CHANGE_VARIABLE_VALUE_SCHEMA
 
-    async def async_step_change_device_tracker_value(
-        self, user_input=None, errors=None
-    ) -> FlowResult:
+    async def async_step_change_device_tracker_value(self, user_input=None, errors=None):
+        user_input = user_input or {}
         errors = {} if errors is None else errors
         ent = entity_registry.async_entries_for_config_entry(
             entity_registry.async_get(self.hass), self.config_entry.entry_id
         )
+        entity_id = None
+        state = None
         if len(ent) > 0:
             entity_id = ent[0].entity_id
             state = self.hass.states.get(entity_id)
@@ -971,7 +991,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             _LOGGER.error("Unable to load Variable to Change Value")
         _LOGGER.debug(f"[Change Device Tracker Value] entity_id: {entity_id}")
         _LOGGER.debug(f"[Change Device Tracker Value] state: {state}")
-        if user_input is not None:
+        if user_input:
             _LOGGER.debug(f"[Change Device Tracker Value] user_input: {user_input}")
 
             if not errors:
@@ -1028,8 +1048,8 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             disp_name = self.config_entry.data.get(CONF_VARIABLE_ID)
         else:
             disp_name = f"{self.config_entry.data.get(CONF_NAME)} ({self.config_entry.data.get(CONF_VARIABLE_ID)})"
-        if state.state:
-            dt_state = state.state
+        if state is not None and getattr(state, "state", None):
+            dt_state = str(state.state)
         else:
             dt_state = "None"
 
@@ -1037,7 +1057,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="change_device_tracker_value",
             data_schema=CHANGE_DEVICE_TRACKER_VALUE_SCHEMA,
             errors=errors,
-            description_placeholders={"disp_name": disp_name, "dt_state": dt_state},
+            description_placeholders={"disp_name": str(disp_name), "dt_state": str(dt_state)},
         )
 
     def build_change_device_tracker_value(self, state):
@@ -1173,9 +1193,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             )
         return CHANGE_VARIABLE_VALUE_SCHEMA
 
-    async def async_step_sensor_options(
-        self, user_input=None, errors=None
-    ) -> FlowResult:
+    async def async_step_sensor_options(self, user_input=None, errors=None):
         errors = {} if errors is None else errors
         if user_input is not None:
             _LOGGER.debug(f"[Sensor Options Page 1] page_1_input: {user_input}")
@@ -1196,8 +1214,8 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=SENSOR_OPTIONS_PAGE_1_SCHEMA,
             errors=errors,
             description_placeholders={
-                "component_config_url": COMPONENT_CONFIG_URL,
-                "disp_name": disp_name,
+                "component_config_url": str(COMPONENT_CONFIG_URL),
+                "disp_name": str(disp_name),
             },
         )
 
@@ -1334,11 +1352,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=SENSOR_OPTIONS_PAGE_2_SCHEMA,
             errors=errors,
             description_placeholders={
-                "disp_name": disp_name,
-                "value_type": self.sensor_options_page_1.get(CONF_VALUE_TYPE, "None"),
-                "device_class": self.sensor_options_page_1.get(
-                    CONF_DEVICE_CLASS, "None"
-                ),
+                "disp_name": str(disp_name),
+                "value_type": str(self.sensor_options_page_1.get(CONF_VALUE_TYPE, "None")),
+                "device_class": str(self.sensor_options_page_1.get(CONF_DEVICE_CLASS, "None")),
             },
         )
 
@@ -1349,10 +1365,8 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             f"new_device_class: {new_device_class} ({type(new_device_class)})"
         )
         val_default_value = None
-        if self.config_entry.data.get(CONF_VALUE) is None or (
-            isinstance(self.config_entry.data.get(CONF_VALUE), str)
-            and self.config_entry.data.get(CONF_VALUE).lower() == "none"
-        ):
+        cfg_val = self.config_entry.data.get(CONF_VALUE)
+        if cfg_val is None or (isinstance(cfg_val, str) and cfg_val.lower() == "none"):
             val_default = False
         elif self.config_entry.data.get(CONF_DEVICE_CLASS) != new_device_class:
             val_default = False
@@ -1393,16 +1407,17 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
                 == sensor.SensorDeviceClass.MONETARY
             ):
-                for el in Currency:
-                    if el.code not in ["XTS", "XXX"]:
-                        SENSOR_UNITS_SELECT_LIST.append(
-                            selector.SelectOptionDict(
-                                label=f"{el.currency_name} [{el.code}]",
-                                value=str(el.code),
+                if Currency is not None:
+                    for el in Currency:
+                        if el.code not in ["XTS", "XXX"]:
+                            SENSOR_UNITS_SELECT_LIST.append(
+                                selector.SelectOptionDict(
+                                    label=f"{el.currency_name} [{el.code}]",
+                                    value=str(el.code),
+                                )
                             )
-                        )
             else:
-                for el in sensor.DEVICE_CLASS_UNITS.get(
+                for el in getattr(sensor, "DEVICE_CLASS_UNITS", {}).get(
                     self.sensor_options_page_1.get(CONF_DEVICE_CLASS), []
                 ):
                     if el is not None and el != "None":
@@ -1588,9 +1603,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
         self.sensor_options_page_1.update({CONF_VALUE_TYPE: value_type})
         return SENSOR_OPTIONS_PAGE_2_SCHEMA
 
-    async def async_step_binary_sensor_options(
-        self, user_input=None, errors=None
-    ) -> FlowResult:
+    async def async_step_binary_sensor_options(self, user_input=None, errors=None):
         errors = {} if errors is None else errors
         if user_input is not None:
             _LOGGER.debug(f"[Binary Sensor Options] user_input: {user_input}")
@@ -1699,14 +1712,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=BINARY_SENSOR_OPTIONS_SCHEMA,
             errors=errors,
             description_placeholders={
-                "component_config_url": COMPONENT_CONFIG_URL,
-                "disp_name": disp_name,
+                "component_config_url": str(COMPONENT_CONFIG_URL),
+                "disp_name": str(disp_name),
             },
         )
 
-    async def async_step_device_tracker_options(
-        self, user_input=None, errors=None
-    ) -> FlowResult:
+    async def async_step_device_tracker_options(self, user_input=None, errors=None):
         errors = {} if errors is None else errors
         if user_input is not None:
             _LOGGER.debug(f"[Device Tracker Options] user_input: {user_input}")
@@ -1894,14 +1905,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=DEVICE_TRACKER_OPTIONS_SCHEMA,
             errors=errors,
             description_placeholders={
-                "component_config_url": COMPONENT_CONFIG_URL,
-                "disp_name": disp_name,
+                "component_config_url": str(COMPONENT_CONFIG_URL),
+                "disp_name": str(disp_name),
             },
         )
 
-    async def async_step_device_options(
-        self, user_input=None, errors=None
-    ) -> FlowResult:
+    async def async_step_device_options(self, user_input=None, errors=None):
 
         errors = {} if errors is None else errors
         if user_input is not None:
@@ -1961,7 +1970,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=DEVICE_OPTIONS_SCHEMA,
             errors=errors,
             description_placeholders={
-                "component_config_url": COMPONENT_CONFIG_URL,
-                "disp_name": self.config_entry.data.get(CONF_NAME),
+                "component_config_url": str(COMPONENT_CONFIG_URL),
+                "disp_name": str(self.config_entry.data.get(CONF_NAME)),
             },
         )

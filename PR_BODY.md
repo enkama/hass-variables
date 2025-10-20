@@ -21,6 +21,7 @@ Home Assistant stubs declare some properties as `cached_property` / `final`. The
 Notes
 
 - No functionality removed. All changes are defensive typing/guard fixes.
-- Happy to follow up and replace ignores with proper `cached_property` usage where suitable, or to remove the `state_attributes` override and rely on the base class behavior instead.
+ - No functionality removed. All changes are defensive typing/guard fixes.
 
+Closes: https://github.com/enkama/hass-variables/issues/140
 Related issue: https://github.com/enkama/hass-variables/issues/141

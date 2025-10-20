@@ -6,7 +6,7 @@ import re
 from enum import Enum
 from typing import Any
 from awesomeversion import AwesomeVersion
-from homeassistant.const import __version__ as HAVERSION  # type: ignore
+from homeassistant.const import __version__ as HAVERSION
 
 import homeassistant.util.dt as dt_util
 import voluptuous as vol
@@ -37,7 +37,6 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry, selector
 try:
@@ -77,6 +76,31 @@ from .const import (
 )
 from .device import update_device
 from .helpers import value_to_type
+
+
+def _get_currency_units() -> list[str]:
+    """Return a list of currency codes suitable for selectors.
+
+    If the optional Currency import is unavailable, return an empty list.
+    """
+    units: list[str] = []
+    try:
+        if Currency:
+            for el in Currency:
+                if el.code not in ["XTS", "XXX"]:
+                    units.append(str(el.code))
+    except Exception:
+        # Be conservative and return empty list on any error
+        return []
+    return units
+
+
+def _get_device_class_units(device_class: str | None) -> list[str]:
+    """Return units for a given device class using sensor.DEVICE_CLASS_UNITS safely."""
+    if not device_class:
+        return []
+    return list(getattr(sensor, "DEVICE_CLASS_UNITS", {}).get(device_class, []))
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1403,27 +1427,23 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                 SENSOR_STATE_CLASS_SELECT_LIST.append(
                     selector.SelectOptionDict(label=str(el.name), value=str(el.value))
                 )
+            # Populate units list from either currency list or sensor.DEVICE_CLASS_UNITS
+            units = []
             if (
                 self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
                 == sensor.SensorDeviceClass.MONETARY
             ):
-                if Currency is not None:
-                    for el in Currency:
-                        if el.code not in ["XTS", "XXX"]:
-                            SENSOR_UNITS_SELECT_LIST.append(
-                                selector.SelectOptionDict(
-                                    label=f"{el.currency_name} [{el.code}]",
-                                    value=str(el.code),
-                                )
-                            )
+                units = _get_currency_units()
             else:
-                for el in getattr(sensor, "DEVICE_CLASS_UNITS", {}).get(
-                    self.sensor_options_page_1.get(CONF_DEVICE_CLASS), []
-                ):
-                    if el is not None and el != "None":
-                        SENSOR_UNITS_SELECT_LIST.append(
-                            selector.SelectOptionDict(label=str(el), value=str(el))
-                        )
+                units = _get_device_class_units(
+                    self.sensor_options_page_1.get(CONF_DEVICE_CLASS)
+                )
+
+            for el in units:
+                if el is not None and el != "None":
+                    SENSOR_UNITS_SELECT_LIST.append(
+                        selector.SelectOptionDict(label=str(el), value=str(el))
+                    )
 
             if self.sensor_options_page_1.get(CONF_DEVICE_CLASS) in [
                 sensor.SensorDeviceClass.DATE

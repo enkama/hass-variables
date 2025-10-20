@@ -218,7 +218,7 @@ async def _async_process_yaml(hass: HomeAssistant, config: ConfigType) -> bool:
     # Remove any config entries that were originally created from YAML imports
     # but are no longer present in the current YAML configuration.
     try:
-        yaml_variable_ids = {v for v in variables.keys()}
+        yaml_variable_ids = set(variables.keys())
         for entry in hass.config_entries.async_entries(DOMAIN):
             if entry.data.get(CONF_YAML_VARIABLE, False) is True:
                 var_id = entry.data.get(CONF_VARIABLE_ID)

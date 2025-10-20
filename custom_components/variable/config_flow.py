@@ -39,6 +39,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry, selector
+
 try:
     # iso4217 is an optional dependency; import if available
     from iso4217 import Currency  # type: ignore
@@ -349,7 +350,9 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     )
                     is not None
                 ):
-                    val = str(user_input.get(CONF_VALUE)) + str(user_input.get(CONF_TZOFFSET))
+                    val = str(user_input.get(CONF_VALUE)) + str(
+                        user_input.get(CONF_TZOFFSET)
+                    )
                 else:
                     val = str(user_input.get(CONF_VALUE)) + "+0000"
             else:
@@ -397,7 +400,9 @@ class VariableConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=SENSOR_PAGE_2_SCHEMA,
             errors=errors,
             description_placeholders={
-                "device_class": str(self.add_sensor_input.get(CONF_DEVICE_CLASS, "None")),
+                "device_class": str(
+                    self.add_sensor_input.get(CONF_DEVICE_CLASS, "None")
+                ),
                 "disp_name": str(disp_name),
                 "value_type": str(self.add_sensor_input.get(CONF_VALUE_TYPE, "None")),
             },
@@ -695,9 +700,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             # If version parsing fails, be conservative and keep the reference
             self.config_entry = config_entry
 
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ):
+    async def async_step_init(self, user_input: dict[str, Any] | None = None):
         """Manage the options."""
 
         if self.config_entry.data.get(CONF_YAML_VARIABLE):
@@ -716,9 +719,7 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             return await self.async_step_device_options()
         return False
 
-    async def async_step_change_sensor_value(
-        self, user_input=None, errors=None
-    ):
+    async def async_step_change_sensor_value(self, user_input=None, errors=None):
         # user_input can be None; normalize to an empty dict for safe .get()/.update()
         user_input = user_input or {}
         errors = {} if errors is None else errors
@@ -748,7 +749,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
                     )
                     is not None
                 ):
-                    val = str(user_input.get(CONF_VALUE)) + str(user_input.get(CONF_TZOFFSET))
+                    val = str(user_input.get(CONF_VALUE)) + str(
+                        user_input.get(CONF_TZOFFSET)
+                    )
                 else:
                     val = str(user_input.get(CONF_VALUE)) + "+0000"
             else:
@@ -1000,7 +1003,9 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             )
         return CHANGE_VARIABLE_VALUE_SCHEMA
 
-    async def async_step_change_device_tracker_value(self, user_input=None, errors=None):
+    async def async_step_change_device_tracker_value(
+        self, user_input=None, errors=None
+    ):
         user_input = user_input or {}
         errors = {} if errors is None else errors
         ent = entity_registry.async_entries_for_config_entry(
@@ -1081,7 +1086,10 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="change_device_tracker_value",
             data_schema=CHANGE_DEVICE_TRACKER_VALUE_SCHEMA,
             errors=errors,
-            description_placeholders={"disp_name": str(disp_name), "dt_state": str(dt_state)},
+            description_placeholders={
+                "disp_name": str(disp_name),
+                "dt_state": str(dt_state),
+            },
         )
 
     def build_change_device_tracker_value(self, state):
@@ -1377,8 +1385,12 @@ class VariableOptionsFlowHandler(config_entries.OptionsFlow):
             errors=errors,
             description_placeholders={
                 "disp_name": str(disp_name),
-                "value_type": str(self.sensor_options_page_1.get(CONF_VALUE_TYPE, "None")),
-                "device_class": str(self.sensor_options_page_1.get(CONF_DEVICE_CLASS, "None")),
+                "value_type": str(
+                    self.sensor_options_page_1.get(CONF_VALUE_TYPE, "None")
+                ),
+                "device_class": str(
+                    self.sensor_options_page_1.get(CONF_DEVICE_CLASS, "None")
+                ),
             },
         )
 

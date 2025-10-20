@@ -313,7 +313,9 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                 )
 
         if updated_attributes is not None:
-            self.__dict__["_attr_extra_state_attributes"] = cast(dict, copy.deepcopy(updated_attributes))
+            self.__dict__["_attr_extra_state_attributes"] = cast(
+                dict, copy.deepcopy(updated_attributes)
+            )
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )
@@ -322,7 +324,10 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
 
         if ATTR_VALUE in kwargs:
             val = kwargs.get(ATTR_VALUE)
-            if val is None or (isinstance(val, str) and val.lower() in ["", "none", "unknown", "unavailable"]):
+            if val is None or (
+                isinstance(val, str)
+                and val.lower() in ["", "none", "unknown", "unavailable"]
+            ):
                 self._attr_is_on = None
             elif isinstance(val, str):
                 if val.lower() in ["true", "1", "t", "y", "yes", "on"]:
@@ -378,7 +383,9 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                 )
 
         if updated_attributes is not None:
-            self.__dict__["_attr_extra_state_attributes"] = cast(dict, copy.deepcopy(updated_attributes))
+            self.__dict__["_attr_extra_state_attributes"] = cast(
+                dict, copy.deepcopy(updated_attributes)
+            )
             _LOGGER.debug(
                 f"({self._attr_name}) [async_toggle_variable] Final Attributes: {updated_attributes}"
             )

@@ -226,7 +226,9 @@ async def _async_process_yaml(hass: HomeAssistant, config: ConfigType) -> bool:
                     _LOGGER.warning(
                         f"[YAML] YAML Entry no longer exists in configuration, deleting entry: {var_id}"
                     )
-                    hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+                    hass.async_create_task(
+                        hass.config_entries.async_remove(entry.entry_id)
+                    )
     except Exception:
         _LOGGER.exception("Error while cleaning up removed YAML variable entries")
 

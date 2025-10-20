@@ -269,21 +269,33 @@ class Variable(RestoreSensor):
                         if (
                             isinstance(device_name, str)
                             and isinstance(self._attr_name, str)
-                            and self._attr_name.lower().strip() != device_name.lower().strip()
+                            and self._attr_name.lower().strip()
+                            != device_name.lower().strip()
                             and self._attr_name.lower().startswith(device_name.lower())
                         ):
                             old_name = self._attr_name
-                            self._attr_name = self._attr_name.replace(device_name, "", 1).strip()
-                            _LOGGER.debug(f"({self._attr_name}) [restored] Truncated: {old_name}")
+                            self._attr_name = self._attr_name.replace(
+                                device_name, "", 1
+                            ).strip()
+                            _LOGGER.debug(
+                                f"({self._attr_name}) [restored] Truncated: {old_name}"
+                            )
                         elif (
                             isinstance(device_name_by_user, str)
                             and isinstance(self._attr_name, str)
-                            and self._attr_name.lower().strip() != device_name_by_user.lower().strip()
-                            and self._attr_name.lower().startswith(device_name_by_user.lower())
+                            and self._attr_name.lower().strip()
+                            != device_name_by_user.lower().strip()
+                            and self._attr_name.lower().startswith(
+                                device_name_by_user.lower()
+                            )
                         ):
                             old_name = self._attr_name
-                            self._attr_name = self._attr_name.replace(device_name_by_user, "", 1).strip()
-                            _LOGGER.debug(f"({self._attr_name}) [restored] Truncated: {old_name}")
+                            self._attr_name = self._attr_name.replace(
+                                device_name_by_user, "", 1
+                            ).strip()
+                            _LOGGER.debug(
+                                f"({self._attr_name}) [restored] Truncated: {old_name}"
+                            )
             _LOGGER.debug(
                 f"({self._attr_name}) [restored] _attr_native_value: {self._attr_native_value}"
             )
@@ -390,7 +402,9 @@ class Variable(RestoreSensor):
                 self._attr_native_value = newval
 
         if updated_attributes is not None:
-            self._attr_extra_state_attributes = cast(dict, copy.deepcopy(updated_attributes))
+            self._attr_extra_state_attributes = cast(
+                dict, copy.deepcopy(updated_attributes)
+            )
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )

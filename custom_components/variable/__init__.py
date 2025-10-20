@@ -46,6 +46,7 @@ from .const import (
     SERVICE_UPDATE_SENSOR,
 )
 from .device import create_device, remove_device
+import homeassistant.helpers.entity_registry as er
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -91,7 +92,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType):
         """Handle calls to the set_entity legacy service."""
 
         # _LOGGER.debug(f"[async_set_entity_legacy_service] call data: {call.data}")
-        await _async_set_legacy_service(call, call.data.get(ATTR_ENTITY))
+        entity = call.data.get(ATTR_ENTITY)
+        if not entity or not isinstance(entity, str):
+            _LOGGER.error(
+                "set_entity legacy service called without valid 'entity' string"
+            )
+            return
+        await _async_set_legacy_service(call, entity)
 
     async def _async_set_legacy_service(call: ServiceCall, var_ent: str):
         """Shared function for both set_entity and set_variable legacy services."""
@@ -182,14 +189,15 @@ async def _async_process_yaml(hass: HomeAssistant, config: ConfigType) -> bool:
             else:
                 _LOGGER.info(f"[YAML] Updating Existing Sensor Variable: {var}")
 
+                entry = None
                 entry_id = None
                 for ent in hass.config_entries.async_entries(DOMAIN):
                     if var == ent.data.get(CONF_VARIABLE_ID):
+                        entry = ent
                         entry_id = ent.entry_id
                         break
                 # _LOGGER.debug(f"[YAML] entry_id: {entry_id}")
-                if entry_id:
-                    entry = ent
+                if entry_id and entry is not None:
                     # _LOGGER.debug(f"[YAML] entry before: {entry.as_dict()}")
 
                     for m in dict(entry.data).keys():
@@ -206,6 +214,21 @@ async def _async_process_yaml(hass: HomeAssistant, config: ConfigType) -> bool:
                     _LOGGER.error(
                         f"[YAML] Update Error. Could not find entry_id for: {var}"
                     )
+
+    # Remove any config entries that were originally created from YAML imports
+    # but are no longer present in the current YAML configuration.
+    try:
+        yaml_variable_ids = {v for v in variables.keys()}
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if entry.data.get(CONF_YAML_VARIABLE, False) is True:
+                var_id = entry.data.get(CONF_VARIABLE_ID)
+                if var_id and var_id not in yaml_variable_ids:
+                    _LOGGER.warning(
+                        f"[YAML] YAML Entry no longer exists in configuration, deleting entry: {var_id}"
+                    )
+                    hass.async_create_task(hass.config_entries.async_remove(entry.entry_id))
+    except Exception:
+        _LOGGER.exception("Error while cleaning up removed YAML variable entries")
 
     return True
 
@@ -234,10 +257,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass_data = dict(entry.data)
     hass.data[DOMAIN][entry.entry_id] = hass_data
-    if hass_data.get(CONF_ENTITY_PLATFORM) in PLATFORMS:
-        await hass.config_entries.async_forward_entry_setups(
-            entry, [hass_data.get(CONF_ENTITY_PLATFORM)]
-        )
+    platform = hass_data.get(CONF_ENTITY_PLATFORM)
+    if platform in PLATFORMS:
+        await hass.config_entries.async_forward_entry_setups(entry, [platform])
     elif hass_data.get(CONF_ENTITY_PLATFORM) == CONF_DEVICE:
         await create_device(hass, entry)
     return True
@@ -250,13 +272,30 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # _LOGGER.debug(f"[init async_unload_entry] entry: {entry}")
     hass_data = dict(entry.data)
     unload_ok = False
-    if hass_data.get(CONF_ENTITY_PLATFORM) in PLATFORMS:
-        unload_ok = await hass.config_entries.async_unload_platforms(
-            entry, [hass_data.get(CONF_ENTITY_PLATFORM)]
-        )
-    elif hass_data.get(CONF_ENTITY_PLATFORM) == CONF_DEVICE:
+    platform = hass_data.get(CONF_ENTITY_PLATFORM)
+    if platform in PLATFORMS:
+        unload_ok = await hass.config_entries.async_unload_platforms(entry, [platform])
+    elif platform == CONF_DEVICE:
         unload_ok = await remove_device(hass, entry)
     if unload_ok:
+        # Remove stored hass data
         hass.data[DOMAIN].pop(entry.entry_id)
+        # Also remove any entity registry entries tied to this config entry to
+        # avoid leaving orphaned entities without unique_id in the Entities list.
+        try:
+            registry = er.async_get(hass)
+            entries = er.async_entries_for_config_entry(registry, entry.entry_id)
+            for entity_entry in list(entries):
+                _LOGGER.debug(
+                    f"Removing entity registry entry for unloaded config: {entity_entry.entity_id}"
+                )
+                try:
+                    registry.async_remove(entity_entry.entity_id)
+                except Exception:
+                    _LOGGER.exception(
+                        f"Failed to remove entity registry entry: {entity_entry.entity_id}"
+                    )
+        except Exception:
+            _LOGGER.exception("Error cleaning up entity registry on unload")
 
     return unload_ok

@@ -1,6 +1,7 @@
 import copy
 import logging
 from collections.abc import MutableMapping
+from typing import cast
 
 import homeassistant.helpers.entity_registry as er
 import voluptuous as vol
@@ -101,7 +102,7 @@ async def async_setup_entry(
         "async_toggle_variable",
     )
 
-    config = hass.data.get(DOMAIN).get(config_entry.entry_id)
+    config = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, {})
     unique_id = config_entry.entry_id
     # _LOGGER.debug(f"[async_setup_entry] config_entry: {config_entry.as_dict()}")
     # _LOGGER.debug(f"[async_setup_entry] config: {config}")
@@ -116,10 +117,10 @@ async def async_setup_entry(
     else:
         async_add_entities([Variable(hass, config, config_entry, unique_id)])
 
-    return True
+    return None
 
 
-class Variable(BinarySensorEntity, RestoreEntity):
+class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
     """Representation of a Binary Sensor Variable."""
 
     def __init__(
@@ -149,7 +150,7 @@ class Variable(BinarySensorEntity, RestoreEntity):
         self._attr_has_entity_name = True
         self._variable_id = slugify(config.get(CONF_VARIABLE_ID).lower())
         self._attr_unique_id = unique_id
-        self._attr_name = config.get(CONF_NAME, config.get(CONF_VARIABLE_ID, None))
+        self._attr_name = config.get(CONF_NAME, config.get(CONF_VARIABLE_ID, ""))
         self._attr_icon = config.get(CONF_ICON)
         self._attr_device_class = config.get(CONF_DEVICE_CLASS)
         self._restore = config.get(CONF_RESTORE)
@@ -165,14 +166,14 @@ class Variable(BinarySensorEntity, RestoreEntity):
             and config.get(CONF_ATTRIBUTES)
             and isinstance(config.get(CONF_ATTRIBUTES), MutableMapping)
         ):
-            self._attr_extra_state_attributes = self._update_attr_settings(
-                config.get(CONF_ATTRIBUTES)
+            self.__dict__["_attr_extra_state_attributes"] = cast(
+                dict, self._update_attr_settings(config.get(CONF_ATTRIBUTES))
             )
         else:
-            self._attr_extra_state_attributes = None
+            self._attr_extra_state_attributes = {}
         registry = er.async_get(self._hass)
         current_entity_id = registry.async_get_entity_id(
-            PLATFORM, DOMAIN, self._attr_unique_id
+            DOMAIN, PLATFORM, self._attr_unique_id
         )
         if current_entity_id is not None:
             self.entity_id = current_entity_id
@@ -195,9 +196,12 @@ class Variable(BinarySensorEntity, RestoreEntity):
                     and state.attributes
                     and isinstance(state.attributes, MutableMapping)
                 ):
-                    self._attr_extra_state_attributes = self._update_attr_settings(
-                        state.attributes.copy(),
-                        just_pop=self._config.get(CONF_UPDATED, False),
+                    self.__dict__["_attr_extra_state_attributes"] = cast(
+                        dict,
+                        self._update_attr_settings(
+                            state.attributes.copy(),
+                            just_pop=self._config.get(CONF_UPDATED, False),
+                        ),
                     )
                 if hasattr(state, "state"):
                     if state.state is None or (
@@ -210,8 +214,10 @@ class Variable(BinarySensorEntity, RestoreEntity):
                         self._attr_is_on = False
                     elif state.state == STATE_ON:
                         self._attr_is_on = True
-                    else:
+                    elif isinstance(state.state, bool):
                         self._attr_is_on = state.state
+                    else:
+                        self._attr_is_on = None
                 else:
                     self._attr_is_on = None
             _LOGGER.debug(
@@ -233,12 +239,12 @@ class Variable(BinarySensorEntity, RestoreEntity):
             )
 
     @property
-    def should_poll(self):
+    def should_poll(self):  # type: ignore[override]
         """If entity should be polled."""
         return False
 
     @property
-    def force_update(self) -> bool:
+    def force_update(self) -> bool:  # type: ignore[override]
         """Force update status of the entity."""
         return self._force_update
 
@@ -307,34 +313,24 @@ class Variable(BinarySensorEntity, RestoreEntity):
                 )
 
         if updated_attributes is not None:
-            self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
+            self.__dict__["_attr_extra_state_attributes"] = cast(dict, copy.deepcopy(updated_attributes))
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )
         else:
-            self._attr_extra_state_attributes = None
+            self.__dict__["_attr_extra_state_attributes"] = cast(dict, {})
 
         if ATTR_VALUE in kwargs:
-            if kwargs.get(ATTR_VALUE) is None or (
-                isinstance(kwargs.get(ATTR_VALUE), str)
-                and kwargs.get(ATTR_VALUE).lower()
-                in ["", "none", "unknown", "unavailable"]
-            ):
+            val = kwargs.get(ATTR_VALUE)
+            if val is None or (isinstance(val, str) and val.lower() in ["", "none", "unknown", "unavailable"]):
                 self._attr_is_on = None
-            elif isinstance(kwargs.get(ATTR_VALUE), str):
-                if kwargs.get(ATTR_VALUE).lower() in [
-                    "true",
-                    "1",
-                    "t",
-                    "y",
-                    "yes",
-                    "on",
-                ]:
+            elif isinstance(val, str):
+                if val.lower() in ["true", "1", "t", "y", "yes", "on"]:
                     self._attr_is_on = True
                 else:
                     self._attr_is_on = False
             else:
-                self._attr_is_on = kwargs.get(ATTR_VALUE)
+                self._attr_is_on = val
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] New Value: {self._attr_is_on}"
             )
@@ -382,12 +378,12 @@ class Variable(BinarySensorEntity, RestoreEntity):
                 )
 
         if updated_attributes is not None:
-            self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
+            self.__dict__["_attr_extra_state_attributes"] = cast(dict, copy.deepcopy(updated_attributes))
             _LOGGER.debug(
                 f"({self._attr_name}) [async_toggle_variable] Final Attributes: {updated_attributes}"
             )
         else:
-            self._attr_extra_state_attributes = None
+            self.__dict__["_attr_extra_state_attributes"] = cast(dict, {})
 
         if self._attr_is_on is not None:
             self._attr_is_on = not self._attr_is_on

@@ -1,18 +1,15 @@
 from __future__ import annotations
 
 import datetime
+from enum import Enum
 import logging
 import re
-from enum import Enum
 from typing import Any
 
-import voluptuous as vol
 from awesomeversion import AwesomeVersion
 from homeassistant import config_entries
-import homeassistant.util.dt as dt_util
 from homeassistant.components import binary_sensor, sensor
 from homeassistant.components.device_tracker.const import ATTR_LOCATION_NAME
-from homeassistant.const import __version__ as HAVERSION
 from homeassistant.const import (
     ATTR_BATTERY_LEVEL,
     ATTR_CONFIGURATION_URL,
@@ -35,10 +32,12 @@ from homeassistant.const import (
     STATE_OFF,
     STATE_ON,
     Platform,
+    __version__ as HAVERSION,
 )
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import entity_registry, selector
+from homeassistant.helpers import config_validation as cv, entity_registry, selector
+import homeassistant.util.dt as dt_util
+import voluptuous as vol
 
 try:
     # iso4217 is an optional dependency; import if available

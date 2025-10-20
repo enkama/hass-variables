@@ -12,8 +12,7 @@ from homeassistant.const import (
     CONF_NAME,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import CONF_YAML_VARIABLE, DOMAIN
 
@@ -101,7 +100,9 @@ async def update_device(hass: HomeAssistant, entry: ConfigEntry, user_input) -> 
         serial_number=user_input.get(ATTR_SERIAL_NUMBER),
         configuration_url=user_input.get(ATTR_CONFIGURATION_URL),
     )
-    _LOGGER.debug(f"({getattr(device, 'name', '')}) [update_device] updated device: {device}")
+    _LOGGER.debug(
+        f"({getattr(device, 'name', '')}) [update_device] updated device: {device}"
+    )
     return True
 
 

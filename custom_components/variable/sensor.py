@@ -1,9 +1,8 @@
+from collections.abc import MutableMapping
 import copy
 import logging
-from collections.abc import MutableMapping
 from typing import cast
 
-import voluptuous as vol
 from homeassistant.components.sensor import (
     CONF_STATE_CLASS,
     PLATFORM_SCHEMA,
@@ -11,7 +10,6 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.components.sensor.const import UNIT_CONVERTERS
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_ICON,
@@ -23,13 +21,17 @@ from homeassistant.const import (
     MATCH_ALL,
     Platform,
 )
-from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import entity_platform
-from homeassistant.helpers.entity import generate_entity_id
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    entity_platform,
+)
 from homeassistant.helpers.device import async_device_info_to_link_from_device_id
+from homeassistant.helpers.entity import generate_entity_id
 import homeassistant.helpers.entity_registry as er
 from homeassistant.util import slugify
+import voluptuous as vol
 
 from .const import (
     ATTR_ATTRIBUTES,

@@ -5,9 +5,7 @@ import copy
 import json
 import logging
 
-import voluptuous as vol
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import (
     CONF_DEVICE,
     CONF_DEVICE_ID,
@@ -18,13 +16,16 @@ from homeassistant.const import (
     SERVICE_RELOAD,
     Platform,
 )
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.device import (
     async_remove_stale_devices_links_keep_current_device,
 )
+import homeassistant.helpers.entity_registry as er
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.helpers.typing import ConfigType
+import voluptuous as vol
 
 from .const import (
     ATTR_ATTRIBUTES,
@@ -46,7 +47,6 @@ from .const import (
     SERVICE_UPDATE_SENSOR,
 )
 from .device import create_device, remove_device
-import homeassistant.helpers.entity_registry as er
 
 _LOGGER = logging.getLogger(__name__)
 

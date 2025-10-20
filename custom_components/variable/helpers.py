@@ -4,6 +4,7 @@ import copy
 import datetime
 import logging
 from collections.abc import MutableMapping
+from typing import Any
 
 import homeassistant.util.dt as dt_util
 
@@ -91,7 +92,9 @@ def set_nested_attribute(target: MutableMapping, path: str, value) -> None:
                     current.append(None)
                 current[token] = copy.deepcopy(value)
             else:
-                next_container = [] if isinstance(next_token, int) else {}
+                next_container: list[Any] | MutableMapping[str, Any] = (
+                    [] if isinstance(next_token, int) else {}
+                )
                 while len(current) <= token:
                     current.append(copy.deepcopy(next_container))
                 if isinstance(next_token, int):

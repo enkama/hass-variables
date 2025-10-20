@@ -1,15 +1,14 @@
+from collections.abc import MutableMapping
 import copy
 import logging
-from collections.abc import MutableMapping
+from typing import cast
 
-import homeassistant.helpers.entity_registry as er
-import voluptuous as vol
 from homeassistant.components.sensor import (
     CONF_STATE_CLASS,
     PLATFORM_SCHEMA,
-    UNIT_CONVERTERS,
     RestoreSensor,
 )
+from homeassistant.components.sensor.const import UNIT_CONVERTERS
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
@@ -25,16 +24,14 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import (
     config_validation as cv,
-)
-from homeassistant.helpers import (
     device_registry as dr,
-)
-from homeassistant.helpers import (
     entity_platform,
 )
 from homeassistant.helpers.device import async_device_info_to_link_from_device_id
 from homeassistant.helpers.entity import generate_entity_id
+import homeassistant.helpers.entity_registry as er
 from homeassistant.util import slugify
+import voluptuous as vol
 
 from .const import (
     ATTR_ATTRIBUTES,
@@ -113,7 +110,7 @@ async def async_setup_entry(
         "async_update_variable",
     )
 
-    config = hass.data.get(DOMAIN).get(config_entry.entry_id)
+    config = hass.data.get(DOMAIN, {}).get(config_entry.entry_id, {})
     unique_id = config_entry.entry_id
 
     if config.get(CONF_EXCLUDE_FROM_RECORDER, DEFAULT_EXCLUDE_FROM_RECORDER):
@@ -125,7 +122,7 @@ async def async_setup_entry(
     else:
         async_add_entities([Variable(hass, config, config_entry, unique_id)])
 
-    return True
+    return None
 
 
 class Variable(RestoreSensor):
@@ -146,10 +143,10 @@ class Variable(RestoreSensor):
         self._attr_has_entity_name = True
         self._variable_id = slugify(config.get(CONF_VARIABLE_ID).lower())
         self._attr_unique_id = unique_id
-        self._attr_name = config.get(CONF_NAME, config.get(CONF_VARIABLE_ID, None))
+        self._attr_name = config.get(CONF_NAME, config.get(CONF_VARIABLE_ID, ""))
         registry = er.async_get(self._hass)
         current_entity_id = registry.async_get_entity_id(
-            PLATFORM, DOMAIN, self._attr_unique_id
+            DOMAIN, PLATFORM, self._attr_unique_id
         )
         if current_entity_id is not None:
             self.entity_id = current_entity_id
@@ -179,11 +176,11 @@ class Variable(RestoreSensor):
             and config.get(CONF_ATTRIBUTES)
             and isinstance(config.get(CONF_ATTRIBUTES), MutableMapping)
         ):
-            self._attr_extra_state_attributes = self._update_attr_settings(
-                config.get(CONF_ATTRIBUTES)
+            self._attr_extra_state_attributes = cast(
+                dict, self._update_attr_settings(config.get(CONF_ATTRIBUTES))
             )
         else:
-            self._attr_extra_state_attributes = None
+            self._attr_extra_state_attributes = cast(dict, {})
         if config.get(CONF_VALUE) is None or (
             isinstance(config.get(CONF_VALUE), str)
             and config.get(CONF_VALUE).lower() in ["", "none", "unknown", "unavailable"]
@@ -238,9 +235,12 @@ class Variable(RestoreSensor):
                     and state.attributes
                     and isinstance(state.attributes, MutableMapping)
                 ):
-                    self._attr_extra_state_attributes = self._update_attr_settings(
-                        state.attributes.copy(),
-                        just_pop=self._config.get(CONF_UPDATED, False),
+                    self._attr_extra_state_attributes = cast(
+                        dict,
+                        self._update_attr_settings(
+                            state.attributes.copy(),
+                            just_pop=self._config.get(CONF_UPDATED, False),
+                        ),
                     )
                     if self._config.get(CONF_UPDATED, True):
                         self._attr_extra_state_attributes.pop(
@@ -254,32 +254,40 @@ class Variable(RestoreSensor):
                             )
                         )
                         # _LOGGER.debug(f"({self._attr_name}) [restored] device: {device}")
+                        # Ensure static checker and runtime know _attr_name is a string.
+                        # Avoid `assert` (flagged by bandit) and coerce to empty
+                        # string if it's unexpectedly None or not a str.
+                        if not isinstance(self._attr_name, str):
+                            self._attr_name = ""
+                        # Safely access device name(s) to satisfy type checks
+                        device_name = getattr(device, "name", None)
+                        device_name_by_user = getattr(device, "name_by_user", None)
                         if (
-                            hasattr(device, "name")
-                            and isinstance(device.name, str)
+                            isinstance(device_name, str)
+                            and isinstance(self._attr_name, str)
                             and self._attr_name.lower().strip()
-                            != device.name.lower().strip()
-                            and self._attr_name.lower().startswith(device.name.lower())
+                            != device_name.lower().strip()
+                            and self._attr_name.lower().startswith(device_name.lower())
                         ):
                             old_name = self._attr_name
                             self._attr_name = self._attr_name.replace(
-                                device.name, "", 1
+                                device_name, "", 1
                             ).strip()
                             _LOGGER.debug(
                                 f"({self._attr_name}) [restored] Truncated: {old_name}"
                             )
                         elif (
-                            hasattr(device, "name_by_user")
-                            and isinstance(device.name_by_user, str)
+                            isinstance(device_name_by_user, str)
+                            and isinstance(self._attr_name, str)
                             and self._attr_name.lower().strip()
-                            != device.name_by_user.lower().strip()
+                            != device_name_by_user.lower().strip()
                             and self._attr_name.lower().startswith(
-                                device.name_by_user.lower()
+                                device_name_by_user.lower()
                             )
                         ):
                             old_name = self._attr_name
                             self._attr_name = self._attr_name.replace(
-                                device.name_by_user, "", 1
+                                device_name_by_user, "", 1
                             ).strip()
                             _LOGGER.debug(
                                 f"({self._attr_name}) [restored] Truncated: {old_name}"
@@ -303,12 +311,12 @@ class Variable(RestoreSensor):
             )
 
     @property
-    def should_poll(self):
+    def should_poll(self):  # type: ignore[override]
         """If entity should be polled."""
         return False
 
     @property
-    def force_update(self) -> bool:
+    def force_update(self) -> bool:  # type: ignore[override]
         """Force update status of the entity."""
         return self._force_update
 
@@ -390,12 +398,14 @@ class Variable(RestoreSensor):
                 self._attr_native_value = newval
 
         if updated_attributes is not None:
-            self._attr_extra_state_attributes = copy.deepcopy(updated_attributes)
+            self._attr_extra_state_attributes = cast(
+                dict, copy.deepcopy(updated_attributes)
+            )
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )
         else:
-            self._attr_extra_state_attributes = None
+            self._attr_extra_state_attributes = cast(dict, {})
 
         _LOGGER.debug(
             f"({self._attr_name}) [updated] _attr_native_value: {self._attr_native_value}"

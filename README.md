@@ -326,3 +326,26 @@ You can find the full documentation on how to do this and adjust this to your ne
 </details>
 
 #### More examples can be found in the [examples](https://github.com/enkama/hass-variables/tree/master/examples) folder.
+
+## Removing variables safely
+
+This project implements safeguards to avoid orphaned variables and entity registry entries. If you need to remove a variable created via YAML or via the UI, follow the steps below.
+
+Removing YAML-created variables
+
+- Remove the variable entry from your `configuration.yaml` (under the `variable:` section).
+- Reload or restart Home Assistant.
+- The integration will detect YAML-imported variables that are no longer present and automatically remove their corresponding config entries. If an entry remains, you can remove it from Settings → Integrations → Variables+History → `...` → Delete.
+
+Removing UI-created variables
+
+- In Home Assistant go to Settings → Integrations → Variables+History and select the variable to configure.
+- Use the integration's UI to remove or delete the variable. This will delete the Config Entry and the integration now also cleans up entity registry entries during unload so the entity should disappear from the Entities list.
+
+If an entity remains without a unique_id (orphaned entity)
+
+1. Open Settings → Devices & Services → Entities and search for the orphaned entity.
+2. If the entity has no unique ID and cannot be removed via the UI, go to Settings → Devices & Services → Entities → three-dot menu → Delete (if available). If that is not available, you can remove the entity registry entry manually by editing the `.storage/core.entity_registry` file in your Home Assistant config (advanced — backup first) or use the UI or `entity_registry` service from a local script.
+3. After removing the registry entry, restart Home Assistant. The entity should no longer appear.
+
+Note: Manual edits to `.storage` are advanced and should be done carefully with a backup. The integration now tries to prevent these situations by removing YAML-missing entries and cleaning up entity registry entries when a config entry unloads.

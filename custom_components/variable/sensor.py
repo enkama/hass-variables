@@ -258,8 +258,11 @@ class Variable(RestoreSensor):
                             )
                         )
                         # _LOGGER.debug(f"({self._attr_name}) [restored] device: {device}")
-                        # Ensure static checker knows _attr_name is a string
-                        assert isinstance(self._attr_name, str)
+                        # Ensure static checker and runtime know _attr_name is a string.
+                        # Avoid `assert` (flagged by bandit) and coerce to empty
+                        # string if it's unexpectedly None or not a str.
+                        if not isinstance(self._attr_name, str):
+                            self._attr_name = ""
                         # Safely access device name(s) to satisfy type checks
                         device_name = getattr(device, "name", None)
                         device_name_by_user = getattr(device, "name_by_user", None)

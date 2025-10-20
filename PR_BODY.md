@@ -14,6 +14,7 @@ Files changed
 - `custom_components/variable/__init__.py`
 - `custom_components/variable/manifest.json`
  - `custom_components/variable/config_flow.py`
+ - `README.md` (docs: safe removal of YAML and UI-created variables)
 
 Why
 
@@ -28,10 +29,11 @@ Config flow & options fixes
 - Initialize `entity_id`/`state` locals before use and guard `state` accesses.
 - Add an AwesomeVersion/HAVERSION guard so older HA versions keep `config_entry` on the OptionsFlow handler (Closes #140).
 
+- Documentation: added README instructions for safely removing YAML-imported and UI-created variables.
+
 Notes
 
 - No functionality removed. All changes are defensive typing/guard fixes.
- - No functionality removed. All changes are defensive typing/guard fixes.
 
 Closes: https://github.com/enkama/hass-variables/issues/140
 Related issue: https://github.com/enkama/hass-variables/issues/141

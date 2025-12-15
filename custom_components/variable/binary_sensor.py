@@ -244,9 +244,12 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                 )
             try:
                 self.async_write_ha_state()
-            except Exception:
-                # async_write_ha_state may not be safe during restore; ignore failures
-                pass
+            except Exception as err:
+                _LOGGER.debug(
+                    "(%s) async_write_ha_state failed during restore: %s",
+                    self._attr_name,
+                    err,
+                )
         else:
             # If not restoring from state, ensure config-provided attributes are applied
             if (
@@ -262,8 +265,12 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                 )
             try:
                 self.async_write_ha_state()
-            except Exception:
-                pass
+            except Exception as err:
+                _LOGGER.debug(
+                    "(%s) async_write_ha_state failed during add: %s",
+                    self._attr_name,
+                    err,
+                )
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})
             self._hass.config_entries.async_update_entry(

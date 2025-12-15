@@ -313,8 +313,12 @@ class Variable(RestoreSensor):
                 )
                 try:
                     self.async_write_ha_state()
-                except Exception:
-                    pass
+                except Exception as err:
+                    _LOGGER.debug(
+                        "(%s) async_write_ha_state failed during restore: %s",
+                        self._attr_name,
+                        err,
+                    )
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})
             self._hass.config_entries.async_update_entry(

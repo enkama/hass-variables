@@ -144,7 +144,7 @@ class Variable(RestoreEntity, TrackerEntity):
         self._force_update = config.get(CONF_FORCE_UPDATE)
         self._yaml_variable = config.get(CONF_YAML_VARIABLE)
         self._exclude_from_recorder = config.get(CONF_EXCLUDE_FROM_RECORDER)
-        self.__dict__["_attr_device_info"] = cast(
+        self._attr_device_info = cast(
             Optional[DeviceInfo],
             async_device_info_to_link_from_device_id(
                 hass,
@@ -156,11 +156,11 @@ class Variable(RestoreEntity, TrackerEntity):
             and config.get(CONF_ATTRIBUTES)
             and isinstance(config.get(CONF_ATTRIBUTES), MutableMapping)
         ):
-            self.__dict__["_attr_extra_state_attributes"] = cast(
+            self._attr_extra_state_attributes = cast(
                 dict, self._update_attr_settings(config.get(CONF_ATTRIBUTES))
             )
         else:
-            self.__dict__["_attr_extra_state_attributes"] = cast(dict, {})
+            self._attr_extra_state_attributes = cast(dict, {})
         registry = er.async_get(self._hass)
         current_entity_id = registry.async_get_entity_id(
             DOMAIN, PLATFORM, self._attr_unique_id
@@ -194,7 +194,7 @@ class Variable(RestoreEntity, TrackerEntity):
                     and state.attributes
                     and isinstance(state.attributes, MutableMapping)
                 ):
-                    self.__dict__["_attr_extra_state_attributes"] = cast(
+                    self._attr_extra_state_attributes = cast(
                         dict,
                         self._update_attr_settings(
                             state.attributes.copy(),
@@ -210,7 +210,7 @@ class Variable(RestoreEntity, TrackerEntity):
                          or self._attr_extra_state_attributes == {})
                         and self._config.get(CONF_ATTRIBUTES)
                     ):
-                        self.__dict__["_attr_extra_state_attributes"] = cast(
+                        self._attr_extra_state_attributes = cast(
                             dict, self._update_attr_settings(self._config.get(CONF_ATTRIBUTES))
                         )
                         _LOGGER.debug(
@@ -218,8 +218,12 @@ class Variable(RestoreEntity, TrackerEntity):
                         )
                         try:
                             self.async_write_ha_state()
-                        except Exception:
-                            pass
+                        except Exception as err:
+                            _LOGGER.debug(
+                                "(%s) async_write_ha_state failed during restore: %s",
+                                self._attr_name,
+                                err,
+                            )
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})
             self._hass.config_entries.async_update_entry(
@@ -309,14 +313,14 @@ class Variable(RestoreEntity, TrackerEntity):
                 )
 
         if updated_attributes is not None:
-            self.__dict__["_attr_extra_state_attributes"] = cast(
+            self._attr_extra_state_attributes = cast(
                 dict, copy.deepcopy(updated_attributes)
             )
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )
         else:
-            self.__dict__["_attr_extra_state_attributes"] = cast(dict, {})
+            self._attr_extra_state_attributes = cast(dict, {})
 
         if ATTR_LATITUDE in kwargs:
             self._attr_latitude = kwargs.get(ATTR_LATITUDE)
@@ -333,7 +337,10 @@ class Variable(RestoreEntity, TrackerEntity):
             and kwargs.get(ATTR_DELETE_LOCATION_NAME) is True
         ):
             self._attr_location_name = None
-        self.async_write_ha_state()
+        try:
+            self.async_write_ha_state()
+        except Exception as err:
+            _LOGGER.debug("(%s) async_write_ha_state failed during update: %s", self._attr_name, err)
 
     @property
     def should_poll(self):  # type: ignore[override]

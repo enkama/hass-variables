@@ -200,9 +200,9 @@ class Variable(RestoreEntity, TrackerEntity):
                             just_pop=self._config.get(CONF_UPDATED, False),
                         ),
                     )
-                _LOGGER.debug(
-                    f"({self._attr_name}) [restored] attributes: {self._attr_extra_state_attributes}"
-                )
+                    _LOGGER.debug(
+                        f"({self._attr_name}) [restored] attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
+                    )
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})
             self._hass.config_entries.async_update_entry(

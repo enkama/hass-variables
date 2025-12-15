@@ -296,7 +296,7 @@ class Variable(RestoreSensor):
                 f"({self._attr_name}) [restored] _attr_native_value: {self._attr_native_value}"
             )
             _LOGGER.debug(
-                f"({self._attr_name}) [restored] attributes: {self._attr_extra_state_attributes}"
+                f"({self._attr_name}) [restored] attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
             )
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})
@@ -411,7 +411,7 @@ class Variable(RestoreSensor):
             f"({self._attr_name}) [updated] _attr_native_value: {self._attr_native_value}"
         )
         _LOGGER.debug(
-            f"({self._attr_name}) [updated] attributes: {self._attr_extra_state_attributes}"
+            f"({self._attr_name}) [updated] attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
         )
         self.async_write_ha_state()
 

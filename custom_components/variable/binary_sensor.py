@@ -223,7 +223,7 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                 f"({self._attr_name}) [restored] _attr_is_on: {self._attr_is_on}"
             )
             _LOGGER.debug(
-                f"({self._attr_name}) [restored] attributes: {self._attr_extra_state_attributes}"
+                f"({self._attr_name}) [restored] attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
             )
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})

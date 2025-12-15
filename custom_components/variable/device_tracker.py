@@ -204,6 +204,22 @@ class Variable(RestoreEntity, TrackerEntity):
                     _LOGGER.debug(
                         f"({self._attr_name}) [restored] attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
                     )
+                    # If there were no attributes restored from state, apply attributes from config
+                    if (
+                        (not getattr(self, "_attr_extra_state_attributes", None)
+                         or self._attr_extra_state_attributes == {})
+                        and self._config.get(CONF_ATTRIBUTES)
+                    ):
+                        self.__dict__["_attr_extra_state_attributes"] = cast(
+                            dict, self._update_attr_settings(self._config.get(CONF_ATTRIBUTES))
+                        )
+                        _LOGGER.debug(
+                            f"({self._attr_name}) [restored] applied config attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
+                        )
+                        try:
+                            self.async_write_ha_state()
+                        except Exception:
+                            pass
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})
             self._hass.config_entries.async_update_entry(

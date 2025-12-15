@@ -166,7 +166,10 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
             and config.get(CONF_ATTRIBUTES)
             and isinstance(config.get(CONF_ATTRIBUTES), MutableMapping)
         ):
-            self.__dict__["_attr_extra_state_attributes"] = cast(
+            _LOGGER.debug(
+                f"({config.get(CONF_NAME, config.get(CONF_VARIABLE_ID))}) [init] config attributes: {config.get(CONF_ATTRIBUTES)} (type: {type(config.get(CONF_ATTRIBUTES))})"
+            )
+            self._attr_extra_state_attributes = cast(
                 dict, self._update_attr_settings(config.get(CONF_ATTRIBUTES))
             )
         else:
@@ -186,6 +189,7 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
     async def async_added_to_hass(self):
         """Run when entity about to be added."""
         await super().async_added_to_hass()
+        _LOGGER.debug(f"({self._attr_name}) [async_added_to_hass] config at add: {self._config}")
         if self._restore is True:
             _LOGGER.info(f"({self._attr_name}) Restoring after Reboot")
             state = await self.async_get_last_state()
@@ -196,7 +200,7 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                     and state.attributes
                     and isinstance(state.attributes, MutableMapping)
                 ):
-                    self.__dict__["_attr_extra_state_attributes"] = cast(
+                    self._attr_extra_state_attributes = cast(
                         dict,
                         self._update_attr_settings(
                             state.attributes.copy(),
@@ -226,6 +230,40 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
             _LOGGER.debug(
                 f"({self._attr_name}) [restored] attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
             )
+            # If there were no attributes restored from state, apply attributes from config
+            if (
+                (not getattr(self, "_attr_extra_state_attributes", None)
+                 or self._attr_extra_state_attributes == {})
+                and self._config.get(CONF_ATTRIBUTES)
+            ):
+                self._attr_extra_state_attributes = cast(
+                    dict, self._update_attr_settings(self._config.get(CONF_ATTRIBUTES))
+                )
+                _LOGGER.debug(
+                    f"({self._attr_name}) [restored] applied config attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
+                )
+            try:
+                self.async_write_ha_state()
+            except Exception:
+                # async_write_ha_state may not be safe during restore; ignore failures
+                pass
+        else:
+            # If not restoring from state, ensure config-provided attributes are applied
+            if (
+                (not getattr(self, "_attr_extra_state_attributes", None)
+                 or self._attr_extra_state_attributes == {})
+                and self._config.get(CONF_ATTRIBUTES)
+            ):
+                self._attr_extra_state_attributes = cast(
+                    dict, self._update_attr_settings(self._config.get(CONF_ATTRIBUTES))
+                )
+                _LOGGER.debug(
+                    f"({self._attr_name}) [added] applied config attributes: {getattr(self, '_attr_extra_state_attributes', {})}"
+                )
+            try:
+                self.async_write_ha_state()
+            except Exception:
+                pass
         if self._config.get(CONF_UPDATED, True):
             self._config.update({CONF_UPDATED: False})
             self._hass.config_entries.async_update_entry(
@@ -251,10 +289,13 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
     def _update_attr_settings(self, new_attributes=None, just_pop=False):
         if new_attributes is not None:
             _LOGGER.debug(
-                f"({self._attr_name}) [update_attr_settings] Updating Special Attributes"
+                f"({self._attr_name}) [update_attr_settings] Updating Special Attributes; incoming: {new_attributes} (type: {type(new_attributes)})"
             )
             if isinstance(new_attributes, MutableMapping):
                 attributes = copy.deepcopy(new_attributes)
+                _LOGGER.debug(
+                    f"({self._attr_name}) [update_attr_settings] copied attributes: {attributes}"
+                )
                 for attrib, setting in VARIABLE_ATTR_SETTINGS.items():
                     if attrib in attributes.keys():
                         if just_pop:
@@ -263,6 +304,9 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                         else:
                             # _LOGGER.debug(f"({self._attr_name}) [update_attr_settings] attrib: {attrib} / setting: {setting} / value: {attributes.get(attrib)}")
                             setattr(self, setting, attributes.pop(attrib, None))
+                _LOGGER.debug(
+                    f"({self._attr_name}) [update_attr_settings] result attributes: {attributes}"
+                )
                 return copy.deepcopy(attributes)
             else:
                 _LOGGER.error(
@@ -325,14 +369,14 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                 )
 
         if updated_attributes is not None:
-            self.__dict__["_attr_extra_state_attributes"] = cast(
+            self._attr_extra_state_attributes = cast(
                 dict, copy.deepcopy(updated_attributes)
             )
             _LOGGER.debug(
                 f"({self._attr_name}) [async_update_variable] Final Attributes: {updated_attributes}"
             )
         else:
-            self.__dict__["_attr_extra_state_attributes"] = cast(dict, {})
+            self._attr_extra_state_attributes = cast(dict, {})
 
         if ATTR_VALUE in kwargs:
             val = kwargs.get(ATTR_VALUE)
@@ -407,14 +451,14 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
                 )
 
         if updated_attributes is not None:
-            self.__dict__["_attr_extra_state_attributes"] = cast(
+            self._attr_extra_state_attributes = cast(
                 dict, copy.deepcopy(updated_attributes)
             )
             _LOGGER.debug(
                 f"({self._attr_name}) [async_toggle_variable] Final Attributes: {updated_attributes}"
             )
         else:
-            self.__dict__["_attr_extra_state_attributes"] = cast(dict, {})
+            self._attr_extra_state_attributes = cast(dict, {})
 
         if self._attr_is_on is not None:
             self._attr_is_on = not self._attr_is_on

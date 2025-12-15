@@ -2,6 +2,7 @@ from collections.abc import MutableMapping
 import copy
 import logging
 from typing import Optional, cast, final
+import yaml
 
 from homeassistant.components.device_tracker.config_entry import TrackerEntity
 from homeassistant.components.device_tracker.const import (
@@ -242,6 +243,10 @@ class Variable(RestoreEntity, TrackerEntity):
     async def async_update_variable(self, **kwargs) -> None:
         """Update Device Tracker Variable."""
 
+        _LOGGER.debug(
+            f"({self._attr_name}) [async_update_variable] kwargs: {kwargs}"
+        )
+
         updated_attributes = None
 
         replace_attributes = kwargs.get(ATTR_REPLACE_ATTRIBUTES, False)
@@ -258,6 +263,14 @@ class Variable(RestoreEntity, TrackerEntity):
 
         attributes = kwargs.get(ATTR_ATTRIBUTES)
         if attributes is not None:
+            if isinstance(attributes, str):
+                try:
+                    attributes = yaml.safe_load(attributes)
+                except Exception as err:
+                    _LOGGER.error(
+                        f"({self._attr_name}) Failed to parse attributes string: %s", err
+                    )
+                    attributes = None
             if isinstance(attributes, MutableMapping):
                 _LOGGER.debug(
                     f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"

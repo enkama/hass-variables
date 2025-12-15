@@ -2,6 +2,7 @@ from collections.abc import MutableMapping
 import copy
 import logging
 from typing import cast
+import yaml
 
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA, BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
@@ -274,6 +275,10 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
     async def async_update_variable(self, **kwargs) -> None:
         """Update Binary Sensor Variable."""
 
+        _LOGGER.debug(
+            f"({self._attr_name}) [async_update_variable] kwargs: {kwargs}"
+        )
+
         updated_attributes = None
 
         replace_attributes = kwargs.get(ATTR_REPLACE_ATTRIBUTES, False)
@@ -290,6 +295,14 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
 
         attributes = kwargs.get(ATTR_ATTRIBUTES)
         if attributes is not None:
+            if isinstance(attributes, str):
+                try:
+                    attributes = yaml.safe_load(attributes)
+                except Exception as err:
+                    _LOGGER.error(
+                        f"({self._attr_name}) Failed to parse attributes string: %s", err
+                    )
+                    attributes = None
             if isinstance(attributes, MutableMapping):
                 _LOGGER.debug(
                     f"({self._attr_name}) [async_update_variable] New Attributes: {attributes}"
@@ -344,6 +357,10 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
     async def async_toggle_variable(self, **kwargs) -> None:
         """Toggle Binary Sensor Variable."""
 
+        _LOGGER.debug(
+            f"({self._attr_name}) [async_toggle_variable] kwargs: {kwargs}"
+        )
+
         updated_attributes = None
 
         replace_attributes = kwargs.get(ATTR_REPLACE_ATTRIBUTES, False)
@@ -360,6 +377,14 @@ class Variable(BinarySensorEntity, RestoreEntity):  # type: ignore[misc]
 
         attributes = kwargs.get(ATTR_ATTRIBUTES)
         if attributes is not None:
+            if isinstance(attributes, str):
+                try:
+                    attributes = yaml.safe_load(attributes)
+                except Exception as err:
+                    _LOGGER.error(
+                        f"({self._attr_name}) Failed to parse attributes string: %s", err
+                    )
+                    attributes = None
             if isinstance(attributes, MutableMapping):
                 _LOGGER.debug(
                     f"({self._attr_name}) [async_toggle_variable] New Attributes: {attributes}"

@@ -131,6 +131,7 @@ class Variable(RestoreEntity, TrackerEntity):
         unique_id,
     ):
         """Initialize a Device Tracker Variable."""
+        super().__init__()
         # _LOGGER.debug(f"({config.get(CONF_NAME, config.get(CONF_VARIABLE_ID))}) [init] config: {config}")
         self._hass = hass
         self._config = config
@@ -385,7 +386,14 @@ class Variable(RestoreEntity, TrackerEntity):
     def state_attributes(self) -> dict[str, StateType]:  # type: ignore[override]
         """Return the device state attributes."""
         attr: dict[str, StateType] = {}
-        attr.update(super().state_attributes)
+        try:
+            attr.update(super().state_attributes)
+        except AttributeError as err:
+            _LOGGER.debug(
+                "(%s) Unable to read base state_attributes during startup: %s",
+                self._attr_name,
+                err,
+            )
         if self._attr_extra_state_attributes is not None:
             attr.update(self._attr_extra_state_attributes)
         if self._attr_source_type is not None:

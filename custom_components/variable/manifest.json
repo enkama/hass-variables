@@ -17,5 +17,5 @@
     "requirements": [
         "iso4217>=1.11.20220401"
     ],
-    "version": "3.5.3"
+    "version": "3.5.4"
 }

@@ -236,10 +236,16 @@ class Variable(RestoreSensor):
                     and state.attributes
                     and isinstance(state.attributes, MutableMapping)
                 ):
+                    # Don't restore Home Assistant's computed friendly_name into
+                    # _attr_name. When linked to a device, friendly_name may already
+                    # be prefixed with the device name, which would otherwise lead to
+                    # name duplication across reboots.
+                    restored_attributes = dict(state.attributes)
+                    restored_attributes.pop(ATTR_FRIENDLY_NAME, None)
                     self._attr_extra_state_attributes = cast(
                         dict,
                         self._update_attr_settings(
-                            state.attributes.copy(),
+                            restored_attributes,
                             just_pop=self._config.get(CONF_UPDATED, False),
                         ),
                     )

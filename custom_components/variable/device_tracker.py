@@ -195,10 +195,14 @@ class Variable(RestoreEntity, TrackerEntity):
                     and state.attributes
                     and isinstance(state.attributes, MutableMapping)
                 ):
+                    # Avoid restoring Home Assistant's computed friendly_name back into
+                    # _attr_name (it may already include the device name prefix).
+                    restored_attributes = dict(state.attributes)
+                    restored_attributes.pop(ATTR_FRIENDLY_NAME, None)
                     self._attr_extra_state_attributes = cast(
                         dict,
                         self._update_attr_settings(
-                            state.attributes.copy(),
+                            restored_attributes,
                             just_pop=self._config.get(CONF_UPDATED, False),
                         ),
                     )
